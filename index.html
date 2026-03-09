@@ -4403,9 +4403,145 @@ function loadData() {
   saveData();
 }
 
+// ── Dirty flags pour savoir quoi pousser ────────────────
+let _dirtyFlags = { entries: false, catalog: false, objectifs: false, commandes_dd: false, commandes_prest: false };
+let _autoSyncDebounceTimer = null;
+
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
   computeNavBadges();
+  // ── Auto-push en arrière-plan (debounce 3s) ───────────
+  _scheduleBackgroundSync();
+}
+
+function markDirty(keys) {
+  keys.forEach(k => { if (k in _dirtyFlags) _dirtyFlags[k] = true; });
+}
+
+function _scheduleBackgroundSync() {
+  if (!_autoSyncEnabled) return;
+  if (!getServiceKey()) return;
+  if (_autoSyncDebounceTimer) clearTimeout(_autoSyncDebounceTimer);
+  _autoSyncDebounceTimer = setTimeout(() => _backgroundSyncAll(), 3000);
+}
+
+async function _backgroundSyncAll() {
+  if (!_autoSyncEnabled || !_isOnline) return;
+  const sk = getServiceKey();
+  if (!sk) return;
+  if (_syncLock) { _autoSyncDebounceTimer = setTimeout(() => _backgroundSyncAll(), 5000); return; }
+  _syncLock = true;
+  _setSyncIndicator('syncing');
+  let errors = 0;
+
+  try {
+    // ── 1. Invendus (tous, merge-duplicates) ───────────────
+    if (appData.entries && appData.entries.length > 0) {
+      // Auto-détect table
+      const chkInv = await fetch(`${SUPABASE_URL}/rest/v1/invendus?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false,status:0}));
+      const chkInvent = await fetch(`${SUPABASE_URL}/rest/v1/inventaires?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false,status:0}));
+
+      if (chkInv.ok) {
+        // Table invendus : lignes détaillées
+        const rows = [];
+        appData.entries.forEach(entry => {
+          (entry.items||[]).forEach(item => {
+            const qty = parseInt(item.qty||item.quantity||0);
+            if (!qty) return;
+            rows.push({ circuit_id: entry.circuit||'SBN', date: entry.date, product_name: item.name||item.productName||item.id||'?', quantite: qty, action: item.dest||item.action||'perte', commentaire: item.comment||'' });
+          });
+        });
+        if (rows.length) {
+          for (let i = 0; i < rows.length; i += 100) {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/invendus`, {
+              method:'POST', headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+              body: JSON.stringify(rows.slice(i,i+100))
+            }).catch(()=>({ok:false}));
+            if (!r.ok) errors++;
+          }
+        }
+      } else if (chkInvent.ok) {
+        // Table inventaires : JSONB
+        for (const entry of appData.entries) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/inventaires`, {
+            method:'POST', headers: getWriteHeaders({'Prefer':'resolution=ignore-duplicates,return=minimal'}),
+            body: JSON.stringify({ date:entry.date, source:entry.source||'manuel', items:entry.items, created_at:entry.createdAt||entry.date+'T12:00:00Z' })
+          }).catch(()=>({ok:false}));
+          if (!r.ok) errors++;
+        }
+      }
+    }
+
+    // ── 2. Objectifs production ────────────────────────────
+    if (appData.objectifs && appData.objectifs.length > 0) {
+      const chk = await fetch(`${SUPABASE_URL}/rest/v1/objectifs_production?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false}));
+      if (chk.ok) {
+        for (const obj of appData.objectifs) {
+          const rows = (obj.items||[]).filter(i=>i.qteObjectif>0).map(i=>({
+            date: obj.date, product_id: i.productId, product_name: i.productName||i.productId,
+            famille: i.famille||'', qte_objectif: i.qteObjectif, created_at: obj.createdAt||obj.date+'T06:00:00Z'
+          }));
+          if (!rows.length) continue;
+          await fetch(`${SUPABASE_URL}/rest/v1/objectifs_production`, {
+            method:'POST', headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+            body: JSON.stringify(rows)
+          }).catch(()=>{});
+        }
+      }
+    }
+
+    // ── 3. Commandes DD ────────────────────────────────────
+    if (appData.commandes_dd && appData.commandes_dd.length > 0) {
+      const chk = await fetch(`${SUPABASE_URL}/rest/v1/commandes_dd?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false}));
+      if (chk.ok) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/commandes_dd`, {
+          method:'POST', headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+          body: JSON.stringify(appData.commandes_dd)
+        }).catch(()=>({ok:false}));
+        if (!r.ok) errors++;
+      }
+    }
+
+    // ── 4. Commandes Prestataire ───────────────────────────
+    const prestData = appData.commandes_prest || appData.commandes_prestataire || [];
+    if (prestData.length > 0) {
+      const chk = await fetch(`${SUPABASE_URL}/rest/v1/commandes_prestataire?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false}));
+      if (chk.ok) {
+        await fetch(`${SUPABASE_URL}/rest/v1/commandes_prestataire`, {
+          method:'POST', headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+          body: JSON.stringify(prestData)
+        }).catch(()=>{});
+      }
+    }
+
+    // ── 5. Catalogue (si clé présente) ────────────────────
+    if (appData.catalog && appData.catalog.length > 0) {
+      const chk = await fetch(`${SUPABASE_URL}/rest/v1/products?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false}));
+      if (chk.ok) {
+        const rows = appData.catalog.map(p => ({
+          id: (p.id && p.id.includes('-')) ? p.id : undefined,
+          name: p.name, category: p.family||p.category||'Autres',
+          selling_price: p.price||0, status: p.status||'actif',
+          is_active: p.active!==false, is_visible: p.visible!==false,
+          unit: p.unit||'pièce'
+        })).filter(r => r.id); // ne pousser que si UUID
+        if (rows.length) {
+          for (let i = 0; i < rows.length; i += 100) {
+            await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+              method:'POST', headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+              body: JSON.stringify(rows.slice(i,i+100))
+            }).catch(()=>{});
+          }
+        }
+      }
+    }
+
+    _setSyncIndicator(errors > 0 ? 'error' : 'ok');
+  } catch(e) {
+    if (e.message !== 'SERVICE_KEY_MISSING') _setSyncIndicator('error');
+  } finally {
+    _syncLock = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4769,12 +4905,111 @@ function renderHome() {
     if (!alerts) alerts = `<div style="padding:10px 14px;font-size:0.85rem;color:var(--muted);font-style:italic">✅ Tout est à jour — bonne journée !</div>`;
   }
 
+  // ── DASHBOARD KPI Direction uniquement ──────────────────
+  let dirDashboard = '';
+  if (role === 'direction') {
+    // Recalcul local des variables hors scope
+    const semValKey2 = `semaine_chef_0`;
+    const semaineOk = (appData.chef_validations||[]).some(v =>
+      v.type==='semaine' && v.weekKey===semValKey2 && v.statut==='ok');
+    const getWeekRange = (offsetWeeks=0) => {
+      const d = new Date(today);
+      const day = d.getDay() || 7;
+      d.setDate(d.getDate() - day + 1 + offsetWeeks*7);
+      const start = d.toISOString().split('T')[0];
+      d.setDate(d.getDate() + 6);
+      const end = d.toISOString().split('T')[0];
+      return { start, end };
+    };
+    const thisWeek = getWeekRange(0);
+    const lastWeek = getWeekRange(-1);
+    const inRange = (date, r) => date >= r.start && date <= r.end;
+
+    // ── KPI Invendus ──
+    const entriesThis = appData.entries.filter(e => inRange(e.date, thisWeek));
+    const entriesLast = appData.entries.filter(e => inRange(e.date, lastWeek));
+    const valEntry = entries => entries.reduce((s, e) =>
+      s + e.items.reduce((ss, i) => {
+        const p = getProd(i.productId) || appData.catalog.find(c => c.name===(i.name||i.productName));
+        return ss + (p ? p.price*(i.qty||0) : 0);
+      }, 0), 0);
+    const invThis = valEntry(entriesThis);
+    const invLast = valEntry(entriesLast);
+    const invTrend = invLast > 0 ? Math.round((invThis - invLast) / invLast * 100) : null;
+    const lastEntry = appData.entries.length ? appData.entries.slice().sort((a,b)=>b.date.localeCompare(a.date))[0] : null;
+    const daysSinceEntry = lastEntry ? Math.floor((today - new Date(lastEntry.date)) / 86400000) : 99;
+    const invAlert = daysSinceEntry >= 3 ? `⚠️ Aucune saisie depuis ${daysSinceEntry}j` : daysSinceEntry === 0 ? '✅ Saisie aujourd\'hui' : `ℹ️ Dernière saisie il y a ${daysSinceEntry}j`;
+    const invAlertColor = daysSinceEntry >= 3 ? '#c62828' : daysSinceEntry === 0 ? '#2a8a50' : '#e65100';
+
+    // ── KPI Production SBN ──
+    const objThis = (appData.objectifs||[]).filter(o => inRange(o.date, thisWeek));
+    const objLast = (appData.objectifs||[]).filter(o => inRange(o.date, lastWeek));
+    const sumObj = arr => arr.reduce((s, o) => s + (o.items||[]).reduce((ss, i) => ss + (i.qteObjectif||0), 0), 0);
+    const sbnThis = sumObj(objThis); const sbnLast = sumObj(objLast);
+    const sbnTrend = sbnLast > 0 ? Math.round((sbnThis - sbnLast) / sbnLast * 100) : null;
+    const sbnAlert = !semaineOk ? '⚠️ Semaine non validée chef' : `✅ ${sbnThis} pièces planifiées`;
+    const sbnAlertColor = !semaineOk ? '#e65100' : '#2a8a50';
+
+    // ── KPI Commandes DD ──
+    const ddCmds = appData.commandes_dd || [];
+    const ddThis = ddCmds.filter(c => inRange(c.date||c.semaine||'', thisWeek));
+    const ddLast = ddCmds.filter(c => inRange(c.date||c.semaine||'', lastWeek));
+    const valDD = arr => arr.reduce((s,c) => s + ((c.items||c.lignes||[]).reduce((ss,i) => ss+(i.total||i.montant||(i.qty||i.qte||0)*(i.prix||i.price||0)||0),0)),0);
+    const ddValThis = valDD(ddThis); const ddValLast = valDD(ddLast);
+    const ddTrend = ddValLast > 0 ? Math.round((ddValThis - ddValLast) / ddValLast * 100) : null;
+    const ddEnRetard = ddCmds.filter(c => c.statut==='en_retard'||c.statut==='retard').length;
+    const ddAlert = ddEnRetard > 0 ? `⚠️ ${ddEnRetard} commande(s) en retard` : ddCmds.length===0 ? 'ℹ️ Aucune commande DD' : `✅ ${ddCmds.length} commande(s)`;
+    const ddAlertColor = ddEnRetard > 0 ? '#c62828' : ddCmds.length===0 ? '#90a4ae' : '#2a8a50';
+
+    // ── KPI Commandes Prestataire ──
+    const prestCmds = appData.commandes_prestataire || appData.commandes_prest || [];
+    const prestThis = prestCmds.filter(c => inRange(c.date||c.semaine||'', thisWeek));
+    const prestLast = prestCmds.filter(c => inRange(c.date||c.semaine||'', lastWeek));
+    const valPrest = arr => arr.reduce((s,c)=>s+((c.items||c.lignes||[]).reduce((ss,i)=>ss+(i.total||i.montant||(i.qty||i.qte||0)*(i.prix||i.price||0)||0),0)),0);
+    const prestValThis = valPrest(prestThis); const prestValLast = valPrest(prestLast);
+    const prestTrend = prestValLast > 0 ? Math.round((prestValThis - prestValLast) / prestValLast * 100) : null;
+    const prestAlert = prestCmds.length===0 ? 'ℹ️ Aucune commande prestataire' : `✅ ${prestCmds.length} commande(s)`;
+    const prestAlertColor = prestCmds.length===0 ? '#90a4ae' : '#2a8a50';
+
+    const trendBadge = (t, unit='%', inverse=false) => {
+      if (t === null) return `<span style="font-size:0.72rem;color:#90a4ae;font-style:italic">Pas de données S-1</span>`;
+      const up = t >= 0;
+      const bad = inverse ? up : !up; // pour invendus, hausse = mauvais
+      const color = bad ? '#c62828' : '#2a8a50';
+      const arrow = up ? '▲' : '▼';
+      return `<span style="font-size:0.8rem;font-weight:700;color:${color}">${arrow} ${Math.abs(t)}${unit} vs S-1</span>`;
+    };
+
+    const kpiCard = (icon, title, value, unit, trend, trendInverse, alertText, alertColor, onclick) => `
+      <div onclick="${onclick}" style="background:white;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.07);cursor:pointer;border:1px solid #f0f0f0;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:1.3rem">${icon}</span>
+          <span style="font-size:0.78rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">${title}</span>
+        </div>
+        <div style="font-size:1.6rem;font-weight:900;color:#1a1a1a;margin-bottom:4px">${value}<span style="font-size:0.85rem;font-weight:600;color:#888;margin-left:4px">${unit}</span></div>
+        <div style="margin-bottom:10px">${trendBadge(trend, '%', trendInverse)}</div>
+        <div style="font-size:0.75rem;font-weight:600;color:${alertColor};background:${alertColor}18;border-radius:6px;padding:4px 8px;display:inline-block">${alertText}</div>
+      </div>`;
+
+    dirDashboard = `
+      <div style="margin-bottom:24px">
+        <div class="home-section-title">📊 Tableau de bord — Semaine en cours</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+          ${kpiCard('📦','Invendus / Pertes', invThis.toFixed(0), '€', invTrend, true, invAlert, invAlertColor, "showTab('historique')")}
+          ${kpiCard('🏭','Production SBN', sbnThis, 'pcs', sbnTrend, false, sbnAlert, sbnAlertColor, "showTab('production');showCircuit('bonprod');showSynthView('bilan')")}
+          ${kpiCard('🚚','Commandes DD', ddValThis>0?ddValThis.toFixed(0):ddCmds.length, ddValThis>0?'€':'cmds', ddTrend, false, ddAlert, ddAlertColor, "showTab('production');showCircuit('dd')")}
+          ${kpiCard('🤝','Prestataire', prestValThis>0?prestValThis.toFixed(0):prestCmds.length, prestValThis>0?'€':'cmds', prestTrend, false, prestAlert, prestAlertColor, "showTab('production');showCircuit('prestataire')")}
+        </div>
+      </div>`;
+  } // fin if (role === 'direction')
+
   el.innerHTML = `
     <!-- En-tête accueil -->
     <div style="background:linear-gradient(135deg,${roleColor},${roleColor}cc);border-radius:14px;padding:20px 24px;margin-bottom:20px;color:white">
       <div style="font-size:0.8rem;font-weight:600;opacity:0.85;margin-bottom:4px">${roleLabel}</div>
       <div style="font-size:1.2rem;font-weight:800">${dateLabel}</div>
     </div>
+    ${dirDashboard}
     <!-- Actions rapides -->
     <div style="margin-bottom:24px">
       <div class="home-section-title">⚡ Actions rapides</div>
@@ -12807,6 +13042,59 @@ async function silentPullOnLogin() {
         }
       });
       if (remObj.length) saveData();
+    }
+
+    // 3. Pull commandes DD
+    const rdd = await fetch(
+      `${SUPABASE_URL}/rest/v1/commandes_dd?select=*&order=semaine.desc&limit=20`,
+      { headers: getWriteHeaders() }
+    ).catch(()=>({ok:false}));
+    if (rdd.ok) {
+      const remDD = await rdd.json();
+      if (remDD.length > 0) {
+        let changed = false;
+        remDD.forEach(row => {
+          const idx = (appData.commandes_dd||[]).findIndex(c =>
+            (c.semaine && c.semaine === row.semaine) || (c.id && c.id === row.id)
+          );
+          if (idx === -1) {
+            if (!appData.commandes_dd) appData.commandes_dd = [];
+            appData.commandes_dd.push(row); changed = true;
+          } else {
+            const remTs = new Date(row.updated_at||row.created_at||0);
+            const locTs = new Date(appData.commandes_dd[idx].updated_at||appData.commandes_dd[idx].created_at||0);
+            if (remTs > locTs) { appData.commandes_dd[idx] = {...appData.commandes_dd[idx], ...row}; changed = true; }
+          }
+        });
+        if (changed) { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+      }
+    }
+
+    // 4. Pull commandes Prestataire
+    const rpr = await fetch(
+      `${SUPABASE_URL}/rest/v1/commandes_prestataire?select=*&order=semaine.desc&limit=20`,
+      { headers: getWriteHeaders() }
+    ).catch(()=>({ok:false}));
+    if (rpr.ok) {
+      const remPr = await rpr.json();
+      if (remPr.length > 0) {
+        let changed = false;
+        remPr.forEach(row => {
+          const key = 'commandes_prest';
+          const idx = (appData[key]||[]).findIndex(c =>
+            (c.semaine && c.semaine === row.semaine) || (c.id && c.id === row.id)
+          );
+          if (idx === -1) {
+            if (!appData[key]) appData[key] = [];
+            appData[key].push(row); changed = true;
+          } else {
+            const remTs = new Date(row.updated_at||row.created_at||0);
+            const locTs = new Date(appData[key][idx].updated_at||appData[key][idx].created_at||0);
+            if (remTs > locTs) { appData[key][idx] = {...appData[key][idx], ...row}; changed = true; }
+          }
+        });
+        if (changed) { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+      }
     }
 
     updateSyncStateGrid();
