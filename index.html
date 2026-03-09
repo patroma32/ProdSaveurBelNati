@@ -51,6 +51,32 @@
   .product-name{flex:1;font-size:0.88rem;font-weight:500;}
   .product-price{font-size:0.78rem;color:var(--muted);width:58px;text-align:right;flex-shrink:0;}
   .qty-input{width:72px!important;text-align:center!important;font-weight:700;padding:7px 4px!important;}
+  /* ── Recherche saisie ── */
+  .saisie-result-row:hover { background:#f5f5f5!important; border-color:#ccc!important; }
+  .saisie-result-row.has-qty { background:#e8f5e9!important; border-color:#81c784!important; }
+  .saisie-res-qty:focus { border-color:#1a6b3c!important; background:#f1f8e9!important; outline:none; box-shadow:0 0 0 2px rgba(26,107,60,0.18); }
+  #saisie-search:focus { outline:none; }
+  #saisie-search-wrap:focus-within { border-color:#1a6b3c!important; box-shadow:0 0 0 3px rgba(26,107,60,0.10); }
+  /* ── Style universel champ de recherche ── */
+  .univ-search-wrap {
+    position:relative; display:flex; align-items:center;
+    background:white; border:1.5px solid #e0e0e0; border-radius:24px;
+    padding:7px 14px; gap:8px; transition:border-color .2s, box-shadow .2s;
+  }
+  .univ-search-wrap:focus-within {
+    border-color:#1a6b3c; box-shadow:0 0 0 3px rgba(26,107,60,0.10);
+  }
+  .univ-search-wrap input {
+    border:none; outline:none; font-size:0.88rem; font-weight:500;
+    color:#1a1a1a; background:transparent; flex:1; min-width:0;
+  }
+  .univ-search-wrap .clr-btn {
+    background:none; border:none; cursor:pointer; color:#aaa;
+    font-size:1rem; padding:0 2px; line-height:1; display:none;
+  }
+  .univ-search-wrap:focus-within .clr-btn,
+  .univ-search-wrap.has-q .clr-btn { display:block; }
+  mark.hl { background:#fff176; border-radius:2px; padding:0 2px; font-style:normal; }
   .total-bar{position:sticky;bottom:0;background:var(--primary-dark);color:white;padding:14px 20px;border-radius:var(--radius) var(--radius) 0 0;display:flex;justify-content:space-between;align-items:center;box-shadow:0 -4px 16px rgba(0,0,0,0.15);z-index:10;}
   .total-value{font-size:1.25rem;font-weight:800;color:var(--accent);}
   .upload-zone{border:2.5px dashed var(--primary);border-radius:var(--radius);padding:40px 20px;text-align:center;cursor:pointer;background:rgba(26,107,60,0.03);position:relative;transition:background 0.2s;}
@@ -128,7 +154,14 @@
 .role-btn .role-desc { font-size:0.75rem;color:var(--muted);display:block;margin-left:34px;margin-top:2px; }
 .pin-input { display:flex;gap:8px;justify-content:center;margin:16px 0; }
 .pin-input input { width:48px;height:52px;text-align:center;font-size:1.4rem;font-weight:800;border:2px solid var(--border);border-radius:10px;letter-spacing:4px; }
-#role-badge { position:fixed;top:0;right:0;padding:4px 12px;font-size:0.72rem;font-weight:700;border-radius:0 0 0 10px;z-index:100; }
+#role-badge { 
+  padding: 4px 12px; font-size: 0.72rem; font-weight: 700;
+  border-radius: 8px; cursor: pointer;
+  background: rgba(255,255,255,0.20); color: white;
+  border: 1.5px solid rgba(255,255,255,0.30);
+  transition: background .15s;
+}
+#role-badge:hover { background: rgba(255,255,255,0.30); }
 .role-vendeur { background:#fff9c4;color:#f57f17; }
 .role-chef    { background:#fce4ec;color:#c62828; }
 .role-manager { background:#e3f2fd;color:#1565c0; }
@@ -248,7 +281,773 @@
   body { background:white; }
 }
 
-/* ── BADGES NAVIGATION ── */
+/* ════════════════════════════════════════════════════════
+   SYSTÈME DE NAVIGATION — REFONTE UX v11.2
+   ════════════════════════════════════════════════════════ */
+
+/* ── Nav principale : meilleur contraste ── */
+nav button {
+  color: rgba(255,255,255,0.80) !important;
+}
+nav button:hover:not(.active) {
+  color: white !important;
+  background: rgba(255,255,255,0.07) !important;
+}
+nav button.active {
+  color: var(--accent) !important;
+  background: rgba(255,255,255,0.06) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+/* ── CIRCUIT SELECTOR (niveau 1) ── */
+.circuit-tabbar {
+  display: flex;
+  gap: 0;
+  background: var(--primary-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+.circuit-tab-btn {
+  flex: 1;
+  padding: 12px 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.80rem;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  transition: all .2s;
+  border-right: 1px solid rgba(255,255,255,0.10);
+  text-align: center;
+  line-height: 1.3;
+  position: relative;
+}
+.circuit-tab-btn:last-child { border-right: none; }
+.circuit-tab-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.90);
+}
+.circuit-tab-btn.active {
+  color: white;
+  font-weight: 800;
+}
+.circuit-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%;
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+.circuit-tab-btn.ct-sbn.active    { background: var(--primary); }
+.circuit-tab-btn.ct-dd.active     { background: #1565c0; }
+.circuit-tab-btn.ct-prest.active  { background: #6a1b9a; }
+.circuit-tab-btn.ct-bonprod.active{ background: #37474f; }
+
+/* ── SOUS-ONGLETS (niveau 2) ── */
+.subtab-bar {
+  display: flex;
+  gap: 0;
+  background: var(--bg);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1.5px solid var(--border);
+}
+.subtab-btn {
+  flex: 1;
+  padding: 9px 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.80rem;
+  background: transparent;
+  color: var(--muted);
+  transition: all .18s;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+.subtab-btn:last-child { border-right: none; }
+.subtab-btn:hover:not(.active) {
+  background: rgba(0,0,0,0.04);
+  color: var(--text);
+}
+.subtab-btn.active {
+  background: white;
+  color: var(--text);
+  font-weight: 800;
+  box-shadow: inset 0 -3px 0 currentColor;
+}
+.subtab-btn.active.st-sbn    { color: var(--primary); }
+.subtab-btn.active.st-dd     { color: #1565c0; }
+.subtab-btn.active.st-prest  { color: #6a1b9a; }
+.subtab-btn.active.st-bonprod{ color: #37474f; }
+
+/* ── BANDEAU CONTEXTE circuit ── */
+.circuit-context-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+}
+.circuit-context-banner h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+}
+.circuit-context-banner .meta {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
+/* ── TOOLBAR STRIP ── */
+.toolbar-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.toolbar-label {
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── NAVIGATION SEMAINE (widget compact) ── */
+.week-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 3px 4px;
+}
+.week-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.week-nav-btn:hover { background: var(--primary); color: white; }
+.week-nav-label {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--primary);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.week-nav-today {
+  padding: 5px 10px;
+  border-radius: 16px;
+  background: rgba(26,107,60,0.10);
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.week-nav-today:hover { background: var(--primary); color: white; }
+
+/* ── BOUTONS ACTIONS GROUPÉS ── */
+.btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.btn-ghost {
+  padding: 7px 13px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 0.80rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+.btn-save {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-save:hover { background: var(--primary-light); }
+.btn-sync {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #1565c0;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-sync:hover { background: #1976d2; }
+.btn-add-client {
+  padding: 7px 13px;
+  border-radius: 20px;
+  background: #e8f5e9;
+  border: 1.5px solid #a5d6a7;
+  color: #2a8a50;
+  cursor: pointer;
+  font-size: 0.80rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-add-client:hover { background: #c8e6c9; }
+
+/* ── VUE TOGGLE (legacy compat) ── */
+.view-toggle { display:flex; background:var(--bg); border:1.5px solid var(--border); border-radius:24px; overflow:hidden; padding:3px; gap:3px; }
+.view-toggle-btn { padding:5px 14px; border-radius:18px; border:none; cursor:pointer; font-size:0.78rem; font-weight:700; background:transparent; color:var(--muted); transition:all .15s; white-space:nowrap; }
+.view-toggle-btn.active { background:var(--primary); color:white; }
+.view-btn { padding:5px 14px; border-radius:18px; border:none; cursor:pointer; font-size:0.78rem; font-weight:700; background:transparent; color:var(--muted); transition:all .15s; white-space:nowrap; }
+.view-btn.active { background:var(--primary); color:white; }
+
+/* ════════════════════════════════════════════════
+   ── GRID VIEW BAR  (toggle contextuel AU-DESSUS du tableau)
+   Couche 2 — "Comment voir ?" — appartient au tableau
+   ════════════════════════════════════════════════ */
+.grid-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0 6px;
+}
+.gvb-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.gvb-toggle {
+  display: flex;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.gvb-btn {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.80rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.gvb-btn.active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.09);
+  font-weight: 800;
+}
+/* Couleur active selon circuit */
+.gvb-dd   .gvb-btn.active { color: #1565c0; }
+.gvb-prest .gvb-btn.active { color: #6a1b9a; }
+
+/* ════════════════════════════════════════════════
+   ── CARD SAVE BAR  (actions en bas de carte)
+   Couche 3 — "Quoi faire ?" — après avoir vu les données
+   ════════════════════════════════════════════════ */
+.card-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+.csb-save {
+  padding: 10px 28px;
+  border-radius: 22px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.90rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  transition: all .15s;
+  box-shadow: 0 2px 8px rgba(42,138,80,0.25);
+}
+.csb-save:hover { background: #1a6b3c; box-shadow: 0 3px 12px rgba(42,138,80,0.35); transform: translateY(-1px); }
+.csb-save.dd    { background: #1565c0; box-shadow: 0 2px 8px rgba(21,101,192,0.25); }
+.csb-save.dd:hover    { background: #0d47a1; box-shadow: 0 3px 12px rgba(21,101,192,0.35); }
+.csb-save.prest { background: #6a1b9a; box-shadow: 0 2px 8px rgba(106,27,154,0.25); }
+.csb-save.prest:hover { background: #4a148c; }
+
+/* État "données modifiées non sauvegardées" */
+.csb-save.unsaved {
+  background: #e65100 !important;
+  box-shadow: 0 2px 8px rgba(230,81,0,0.30) !important;
+  animation: pulse-unsaved 2s ease-in-out infinite;
+}
+@keyframes pulse-unsaved {
+  0%,100% { box-shadow: 0 2px 8px rgba(230,81,0,0.30); }
+  50%      { box-shadow: 0 4px 18px rgba(230,81,0,0.55); transform: translateY(-1px); }
+}
+.csb-unsaved-badge {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e65100;
+  white-space: nowrap;
+  animation: fadeInBadge .25s ease;
+}
+.csb-unsaved-badge.visible { display: flex; }
+@keyframes fadeInBadge { from { opacity:0; transform:translateX(-6px) } to { opacity:1; transform:none } }
+.csb-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.csb-sync {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  color: var(--muted);
+}
+.csb-sync:hover { border-color: #1565c0; color: #1565c0; background: #e3f2fd; }
+.csb-more-wrap { position: relative; }
+.csb-more {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+}
+.csb-more:hover { color: var(--text); border-color: #bbb; }
+.csb-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 220px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  z-index: 200;
+}
+.csb-dropdown.open { display: block; }
+.csb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: background .1s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.csb-item:hover { background: var(--bg); }
+.csb-item-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+
+/* ════════════════════════════════════════════════
+   ── DATE PICKER BAR  (vues Reçu / Livraison)
+   ════════════════════════════════════════════════ */
+.date-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.date-picker-bar input[type=date] {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: 0.90rem;
+  font-weight: 700;
+  background: white;
+  cursor: pointer;
+  color: var(--text);
+}
+.dpb-load {
+  padding: 7px 16px;
+  border-radius: 16px;
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+}
+.dpb-load:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.dpb-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.dpb-save {
+  margin-left: auto;
+  padding: 8px 22px;
+  border-radius: 20px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: all .15s;
+}
+.dpb-save:hover { background: #1b5e20; }
+
+/* ════════════════════════════════════════════════
+   ── SYN HORIZON TABS  (Synthèse Hebdo/Mensuel)
+   ════════════════════════════════════════════════ */
+.syn-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.syn-tab {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+}
+.syn-tab.active { background: #1565c0; color: white; border-color: #1565c0; }
+.syn-tab.active.prest { background: #6a1b9a; border-color: #6a1b9a; }
+
+
+/* ════════════════════════════════════════════════
+   ── WEEK BANNER  (navigation temporelle principale)
+   ════════════════════════════════════════════════ */
+.week-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
+  min-height: 68px;
+}
+.wb-arrow {
+  width: 52px;
+  min-height: 68px;
+  background: var(--bg);
+  border: none;
+  border-right: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--muted);
+  transition: all .18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wb-arrow:last-of-type { border-right: none; border-left: 1.5px solid var(--border); }
+.wb-arrow:hover { background: var(--primary); color: white; }
+.wb-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  padding: 10px 8px;
+}
+.wb-sublabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+}
+.wb-date {
+  font-size: 1.08rem;
+  font-weight: 900;
+  color: var(--text);
+  white-space: nowrap;
+}
+.wb-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: all .15s;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wb-today:hover { color: var(--primary); text-decoration: none; background: rgba(42,138,80,0.07); }
+/* couleur selon circuit */
+.week-banner.wb-sbn  .wb-date { color: var(--primary); }
+.week-banner.wb-dd   .wb-date { color: #1565c0; }
+.week-banner.wb-prest .wb-date { color: #6a1b9a; }
+.week-banner.wb-dd   .wb-arrow:hover { background: #1565c0; }
+.week-banner.wb-prest .wb-arrow:hover { background: #6a1b9a; }
+.week-banner.wb-dd   .wb-today:hover { color: #1565c0; background: rgba(21,101,192,0.07); }
+.week-banner.wb-prest .wb-today:hover { color: #6a1b9a; background: rgba(106,27,154,0.07); }
+
+/* ════════════════════════════════════════════════
+   ── CONTENT HEADER  (vue toggle + actions inline)
+   ════════════════════════════════════════════════ */
+.content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0 12px;
+  flex-wrap: wrap;
+}
+/* Segmented control — vue toggle discret */
+.seg-control {
+  display: flex;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+.seg-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.seg-btn.active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  font-weight: 800;
+}
+/* Actions côté droit */
+.content-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.ca-save {
+  padding: 7px 20px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: all .15s;
+}
+.ca-save:hover { background: #1a6b3c; }
+.ca-sync {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.ca-sync:hover { border-color: #1565c0; background: #e3f2fd; }
+/* Menu ••• */
+.ca-more-wrap { position: relative; }
+.ca-more {
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.ca-more:hover { border-color: var(--border); color: var(--text); background: var(--bg); }
+.ca-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 200px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.13);
+  z-index: 200;
+}
+.ca-dropdown.open { display: block; }
+.ca-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: background .1s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.ca-item:hover { background: var(--bg); }
+.ca-item.danger { color: #c62828; }
+.ca-item-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+
+/* ════════════════════════════════════════════════
+   ── DATE ROW  (vues à date unique : Reçu, Livraison)
+   ════════════════════════════════════════════════ */
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.date-row input[type=date] {
+  padding: 7px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: white;
+  cursor: pointer;
+}
+.dr-load {
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+}
+.dr-load:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.dr-save {
+  margin-left: auto;
+  padding: 7px 18px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: all .15s;
+}
+.dr-save:hover { background: #1a6b3c; }
+
+/* ════════════════════════════════════════════════
+   ── BADGES NAVIGATION ──
 .nav-badge-dot {
   display:inline-flex;align-items:center;justify-content:center;
   min-width:17px;height:17px;padding:0 4px;
@@ -400,12 +1199,15 @@
     <span class="logo-badge">BèlNati</span>
     <h1>📦 Production SaveurBèlNati</h1>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <button id="notif-bell" onclick="toggleNotifPanel()" style="display:none;position:relative;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);border-radius:8px;cursor:pointer;font-size:1.2rem;padding:5px 10px;color:white" title="Notifications">
+      🔔<span id="notif-badge-nav" class="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px">0</span>
+    </button>
+    <span id="header-date" style="font-size:0.78rem;opacity:0.75"></span>
     <button id="home-btn" onclick="goHome()" title="Tableau de bord">🏠 Accueil</button>
-    <span id="header-date" style="font-size:0.8rem;opacity:0.8"></span>
+    <div id="role-badge" style="display:none"></div>
   </div>
 </header>
-
 
 <!-- ÉCRAN DE CONNEXION -->
 <div id="login-screen">
@@ -449,11 +1251,7 @@
     </div>
   </div>
 </div>
-<!-- BADGE RÔLE -->
-<div id="role-badge" style="display:none"></div>
-<button id="notif-bell" onclick="toggleNotifPanel()" style="display:none;position:relative;background:none;border:none;cursor:pointer;font-size:1.3rem;padding:4px 8px" title="Notifications">
-  🔔<span id="notif-badge-nav" class="notif-badge" style="display:none;position:absolute;top:0;right:0">0</span>
-</button>
+
 
 <nav>
   <button onclick="showTab('production')">📦 Commandes<span class="nav-badge-dot" id="nbadge-production" style="display:none">0</span></button>
@@ -516,6 +1314,35 @@
     </div>
   </div>
   <div id="mode-manual">
+
+    <!-- ── MOTEUR DE RECHERCHE ─────────────────────────── -->
+    <div id="saisie-search-wrap" style="
+      background:white;border-radius:14px;
+      box-shadow:0 2px 12px rgba(0,0,0,0.10);
+      padding:14px 16px;margin-bottom:12px;border:2px solid #e0e0e0;
+      transition:border-color .2s">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:1.3rem">🔍</span>
+        <input type="text" id="saisie-search"
+          placeholder="Rechercher un produit… (ex: croissant, sandwich thon)"
+          oninput="filterSaisie()"
+          onkeydown="saisieSearchKey(event)"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          style="flex:1;border:none;outline:none;font-size:1rem;font-weight:500;color:#1a1a1a;background:transparent">
+        <button onclick="clearSaisieSearch()" id="saisie-search-clear"
+          style="display:none;background:none;border:none;cursor:pointer;font-size:1.1rem;color:#999;padding:2px 6px">✕</button>
+      </div>
+      <!-- Résultats de recherche -->
+      <div id="saisie-search-results" style="display:none"></div>
+      <!-- Produits déjà saisis -->
+      <div id="saisie-saisis-recap" style="display:none">
+        <div style="font-size:0.72rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+          ✅ Produits saisis
+        </div>
+        <div id="saisie-saisis-list"></div>
+      </div>
+    </div>
+
     <div id="manual-families"></div>
     <div class="total-bar">
       <div>
@@ -583,7 +1410,24 @@
 <!-- TAB HISTORIQUE -->
 <div id="tab-historique" class="tab-content">
   <div class="card">
-    <h2>📅 Historique des saisies</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <h2 style="margin:0">📅 Historique des saisies</h2>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="univ-search-wrap" style="width:220px">
+          <span style="font-size:1rem;opacity:0.5">🔍</span>
+          <input type="text" id="hist-search" placeholder="Produit, date, famille…"
+            autocomplete="off" oninput="renderHistorique()">
+          <button class="clr-btn" title="Effacer">✕</button>
+        </div>
+        <select id="hist-period" onchange="renderHistorique()"
+          style="padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:20px;font-size:0.82rem;color:#555;cursor:pointer">
+          <option value="all">Toutes les dates</option>
+          <option value="7">7 derniers jours</option>
+          <option value="30">30 derniers jours</option>
+          <option value="90">3 derniers mois</option>
+        </select>
+      </div>
+    </div>
     <div id="history-list"></div>
   </div>
 </div>
@@ -593,7 +1437,7 @@
   <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
     <h2 style="margin:0">🗂️ Catalogue produits &nbsp;<span id="cat-count" style="font-size:0.85rem;font-weight:400;color:var(--muted)"></span></h2>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input type="text" id="cat-search" placeholder="🔍 Rechercher…" oninput="renderCatalogue()"
+      <input type="text" id="cat-search" placeholder="Rechercher…" oninput="renderCatalogue()"
         style="padding:7px 12px;border:1px solid var(--border);border-radius:20px;font-size:0.85rem;width:180px">
       <!-- Boutons export : manager & direction uniquement -->
       <div id="cat-export-btns" style="display:none;gap:6px;align-items:center">
@@ -753,38 +1597,31 @@
 <div id="tab-production" class="tab-content">
 
   <!-- SOUS-NAVIGATION -->
-      <!-- ── BARRE CIRCUITS ── -->
-    <div style="display:flex;gap:6px;background:rgba(0,0,0,0.04);border-radius:10px;padding:4px;margin-bottom:10px;flex-wrap:wrap">
-      <button id="stab-sbn" onclick="showCircuit('sbn')"
-        style="flex:1;min-width:80px;padding:7px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:var(--primary);color:#fff">
-        🍞 SBN
+    <!-- ── BARRE CIRCUITS ── -->
+    <div class="circuit-tabbar">
+      <button id="stab-sbn" class="circuit-tab-btn ct-sbn" onclick="showCircuit('sbn')">
+        🍞<br><span style="font-size:0.72rem">SBN</span>
       </button>
-      <button id="stab-dd" onclick="showCircuit('dd')"
-        style="flex:1;min-width:80px;padding:7px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
-        🚚 Directe
+      <button id="stab-dd" class="circuit-tab-btn ct-dd" onclick="showCircuit('dd')">
+        🚚<br><span style="font-size:0.72rem">Directe</span>
       </button>
-      <button id="stab-prest" onclick="showCircuit('prest')"
-        style="flex:1;min-width:80px;padding:7px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
-        🏭 Prestataire
+      <button id="stab-prest" class="circuit-tab-btn ct-prest" onclick="showCircuit('prest')">
+        🏭<br><span style="font-size:0.72rem">Prestataire</span>
       </button>
-      <button id="stab-bonprod" onclick="showCircuit('bonprod')"
-        style="flex:1;min-width:80px;padding:7px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
-        🧾 Bon de Production
+      <button id="stab-bonprod" class="circuit-tab-btn ct-bonprod" onclick="showCircuit('bonprod')">
+        🧾<br><span style="font-size:0.72rem">Bon de Prod</span>
       </button>
     </div>
     <!-- ── WRAPPER CIRCUIT SBN ── -->
     <div id="circuit-sbn">
-<div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid var(--border)">
-    <button class="sub-tab-btn active" onclick="showProdTab('objectifs')" id="stab-objectifs" data-circuit="sbn"
-      style="flex:1;padding:8px;border-radius:7px;border:none;cursor:pointer;font-weight:600;font-size:0.82rem;background:var(--primary);color:#fff">
+<div class="subtab-bar">
+    <button class="subtab-btn st-sbn active" onclick="showProdTab('objectifs')" id="stab-objectifs" data-circuit="sbn">
       🏪 Espace de vente
     </button>
-    <button class="sub-tab-btn" onclick="showProdTab('particuliers')" id="stab-particuliers" data-circuit="sbn"
-      style="flex:1;padding:8px;border-radius:7px;border:none;cursor:pointer;font-weight:600;font-size:0.82rem;background:transparent;color:var(--text)">
+    <button class="subtab-btn st-sbn" onclick="showProdTab('particuliers')" id="stab-particuliers" data-circuit="sbn">
       👤 Particuliers
     </button>
-    <button class="sub-tab-btn" onclick="showProdTab('recu')" id="stab-realise" data-circuit="sbn"
-      style="flex:1;padding:8px;border-radius:7px;border:none;cursor:pointer;font-weight:600;font-size:0.82rem;background:transparent;color:var(--text)">
+    <button class="subtab-btn st-sbn" onclick="showProdTab('recu')" id="stab-realise" data-circuit="sbn">
       ✅ Reçu
     </button>
   </div>
@@ -792,27 +1629,44 @@
   <!-- ── SOUS-ONGLET ESPACE DE VENTE (SBN) ── -->
   <div id="sub-objectifs">
     <div class="card">
-      <h2>🏪 Commandes — Espace de vente</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
-        Saisissez les quantités commandées pour chaque jour. Naviguez entre semaines avec les flèches.
-      </p>
-      <!-- Navigation semaine -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="weekNav(-1)">◀ Semaine préc.</button>
-        <strong id="week-label" style="font-size:0.95rem;color:var(--primary)"></strong>
-        <button class="btn btn-outline" onclick="weekNav(+1)">Semaine suiv. ▶</button>
-        <button class="btn btn-outline" onclick="weekNav(0)">Semaine courante</button>
-        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline" onclick="loadSuggestionWeek()">💡 Suggestions</button>
-          <button class="btn btn-outline" onclick="duplicateSBNWeek()" title="Copier cette semaine sur la semaine suivante" style="color:#e65100;border-color:#ffcc80">📅 Dupliquer →</button>
-          <button class="btn btn-primary" onclick="saveObjectifsWeek()">💾 Enregistrer</button>
-          <button class="btn btn-accent" onclick="pushObjectifsWeek()">⬆️ Sync</button>
+
+      <!-- ❶ QUAND ? → Bannière semaine seule -->
+      <div class="week-banner wb-sbn">
+        <button class="wb-arrow" onclick="weekNav(-1)">◀</button>
+        <div class="wb-center">
+          <span class="wb-sublabel">Semaine des commandes</span>
+          <span id="week-label" class="wb-date">—</span>
+          <button class="wb-today" onclick="weekNav(0)">Semaine courante</button>
         </div>
+        <button class="wb-arrow" onclick="weekNav(+1)">▶</button>
       </div>
-      <!-- Sélecteur de famille -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="obj-fam-tabs"></div>
+
+      <!-- Filtre famille — sélecteur rapide de la catégorie -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 0 4px" id="obj-fam-tabs"></div>
+
+      <!-- ❷ COMMENT VOIR ? → Toggle contextuel discret au-dessus de la grille -->
+      <!-- (SBN n'a pas de toggle Produit/Client : la grille est par famille) -->
+
       <!-- Grille semaine -->
       <div id="obj-week-grid" style="overflow-x:auto"></div>
+
+      <!-- ❸ QUOI FAIRE ? → Barre d'actions en bas après avoir vu les données -->
+      <div class="card-save-bar">
+        <div class="csb-left">
+          <span class="csb-unsaved-badge" id="sbn-unsaved-badge">● Modifications non sauvegardées</span>
+          <button class="csb-sync" onclick="pushObjectifsWeek()" title="Synchroniser vers Supabase">☁️</button>
+          <div class="csb-more-wrap">
+            <button class="csb-more" onclick="openMore('sbn-csb')">••• Plus</button>
+            <div class="csb-dropdown" id="sbn-csb">
+              <button class="csb-item" onclick="loadSuggestionWeek();closeMore('sbn-csb')">💡 Suggestions de commande</button>
+              <div class="csb-item-sep"></div>
+              <button class="csb-item" onclick="duplicateSBNWeek();closeMore('sbn-csb')">📅 Dupliquer vers la semaine suivante →</button>
+            </div>
+          </div>
+        </div>
+        <button class="csb-save" id="sbn-save-btn" onclick="saveObjectifsWeek()">💾 Enregistrer</button>
+      </div>
+
     </div>
     <div class="card">
       <h2>📋 Récapitulatif semaine</h2>
@@ -824,17 +1678,14 @@
   <div id="sub-particuliers" style="display:none">
     <div class="card" style="margin-top:8px">
       <!-- Sous-onglets Particuliers -->
-      <div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:14px;border:1px solid var(--border)">
-        <button id="part-stab-nouveau" onclick="showPartSub('nouveau')"
-          style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:#e65100;color:#fff">
+      <div class="subtab-bar">
+        <button id="part-stab-nouveau" class="subtab-btn st-sbn active" onclick="showPartSub('nouveau')" style="color:#e65100">
           ➕ Nouvelle commande
         </button>
-        <button id="part-stab-liste" onclick="showPartSub('liste')"
-          style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+        <button id="part-stab-liste" class="subtab-btn st-sbn" onclick="showPartSub('liste')">
           📋 Commandes en cours
         </button>
-        <button id="part-stab-planning" onclick="showPartSub('planning')"
-          style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+        <button id="part-stab-planning" class="subtab-btn st-sbn" onclick="showPartSub('planning')">
           🗓️ Planning
         </button>
       </div>
@@ -972,12 +1823,11 @@
   <!-- ── SOUS-ONGLET REÇU BOUTIQUE (SBN) ── -->
   <div id="sub-realise" style="display:none">
     <div class="card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-        <h2 style="margin:0">✅ Réception — Production SBN</h2>
-        <input type="date" id="reception-date-sbn"
-          style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-        <button onclick="renderReceptionSBN()" style="padding:6px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">🔄 Charger</button>
-        <button onclick="validerReceptionSBN()" style="padding:6px 16px;border-radius:20px;background:#2e7d32;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">✅ Enregistrer réception</button>
+      <div class="date-picker-bar">
+        <span class="dpb-label">Date de réception</span>
+        <input type="date" id="reception-date-sbn">
+        <button class="dpb-load" onclick="renderReceptionSBN()">🔄 Charger</button>
+        <button class="dpb-save" onclick="validerReceptionSBN()">✅ Enregistrer la réception</button>
       </div>
       <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
         Cochez les produits <strong>reçus de la production</strong>. Modifiez la quantité si elle diffère du bon, ou ajoutez un produit imprévu.
@@ -991,74 +1841,110 @@
 
     <div id="circuit-dd" style="display:none">
       <div class="card" style="margin-top:8px">
+        <!-- Bandeau contexte DD -->
+        <div class="circuit-context-banner" style="background:#e3f2fd;color:#1565c0">
+          <span style="font-size:1.4rem">🚚</span>
+          <div>
+            <h3 style="color:#1565c0">Distribution Directe</h3>
+            <div class="meta">Commandes fermes par jour de semaine</div>
+          </div>
+        </div>
+
         <!-- Sous-onglets DD -->
-        <div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:14px;border:1px solid var(--border)">
-          <button id="dd-stab-commandes" onclick="showDDSub('commandes')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:#1565c0;color:#fff">
+        <div class="subtab-bar">
+          <button id="dd-stab-commandes" class="subtab-btn st-dd active" onclick="showDDSub('commandes')">
             📋 Commandes
           </button>
-          <button id="dd-stab-recu" onclick="showDDSub('recu')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="dd-stab-recu" class="subtab-btn st-dd" onclick="showDDSub('recu')">
             ✅ Reçu
           </button>
-          <button id="dd-stab-livraison" onclick="showDDSub('livraison')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="dd-stab-livraison" class="subtab-btn st-dd" onclick="showDDSub('livraison')">
             🚚 Livraison
           </button>
-          <button id="dd-stab-synthese" onclick="showDDSub('synthese')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="dd-stab-synthese" class="subtab-btn st-dd" onclick="showDDSub('synthese')">
             📊 Synthèse
           </button>
         </div>
 
         <!-- Commandes DD -->
         <div id="dd-sub-commandes">
-        <h2 style="color:#1565c0">🚚 Distribution Directe</h2>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
-          5 clients · Commandes fermes par jour de semaine
-        </p>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <button onclick="ddWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Semaine préc.</button>
-          <strong id="dd-week-label" style="font-size:0.9rem;color:var(--primary)"></strong>
-          <button onclick="ddWeekNav(0)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Aujourd'hui</button>
-          <button onclick="ddWeekNav(1)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Semaine suiv. ▶</button>
-          <button onclick="loadDDWeekRef()" style="padding:5px 14px;border-radius:20px;background:#e3f2fd;border:1px solid #90caf9;color:#1565c0;cursor:pointer;font-weight:700;margin-left:auto">📋 Référence</button>
-          <button onclick="duplicateDDWeek()" style="padding:5px 14px;border-radius:20px;background:#fff3e0;border:1px solid #ffcc80;color:#e65100;cursor:pointer;font-weight:700" title="Copier cette semaine sur la semaine suivante">📅 Dupliquer →</button>
-          <button onclick="saveDDWeek()" style="padding:5px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">💾 Enregistrer</button>
-          <button onclick="pushDDWeek()" style="padding:5px 14px;border-radius:20px;background:#1565c0;color:white;border:none;cursor:pointer;font-weight:700">☁️ Sync</button>
-          <button onclick="openClientModal('dd')" style="padding:5px 14px;border-radius:20px;background:#e8f5e9;border:1px solid #a5d6a7;color:#2a8a50;cursor:pointer;font-weight:700">➕ Client</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="filter-btn active" id="dd-view-client" onclick="setDDView('client',this)">🏪 Par client</button>
-          <button class="filter-btn" id="dd-view-prod" onclick="setDDView('produit',this)">📦 Par produit</button>
-        </div>
-        <div id="dd-grid"></div>
-        <div id="dd-week-recap" style="margin-top:16px"></div>
+
+          <!-- ❶ QUAND ? → Bannière semaine seule -->
+          <div class="week-banner wb-dd">
+            <button class="wb-arrow" onclick="ddWeekNav(-1)">◀</button>
+            <div class="wb-center">
+              <span class="wb-sublabel">Semaine des commandes</span>
+              <span id="dd-week-label" class="wb-date">—</span>
+              <button class="wb-today" onclick="ddWeekNav(0)">Semaine courante</button>
+            </div>
+            <button class="wb-arrow" onclick="ddWeekNav(1)">▶</button>
+          </div>
+
+          <!-- ❷ COMMENT VOIR ? → Toggle discret au-dessus du tableau -->
+          <div class="grid-view-bar gvb-dd">
+            <span class="gvb-label">Afficher par</span>
+            <div class="gvb-toggle">
+              <button class="gvb-btn active" id="dd-view-client"  onclick="setDDView('client',this)">🏪 Client</button>
+              <button class="gvb-btn"        id="dd-view-prod"    onclick="setDDView('produit',this)">📦 Produit</button>
+            </div>
+          </div>
+
+          <!-- Grille -->
+          <div id="dd-grid"></div>
+          <div id="dd-week-recap" style="margin-top:16px"></div>
+
+          <!-- ❸ QUOI FAIRE ? → Barre d'actions en bas -->
+          <div class="card-save-bar">
+            <div class="csb-left">
+              <span class="csb-unsaved-badge" id="dd-unsaved-badge">● Modifications non sauvegardées</span>
+              <button class="csb-sync" onclick="pushDDWeek()" title="Synchroniser vers Supabase">☁️</button>
+              <div class="csb-more-wrap">
+                <button class="csb-more" onclick="openMore('dd-csb')">••• Plus</button>
+                <div class="csb-dropdown" id="dd-csb">
+                  <button class="csb-item" onclick="loadDDWeekRef();closeMore('dd-csb')">📋 Charger la semaine de référence</button>
+                  <div class="csb-item-sep"></div>
+                  <button class="csb-item" onclick="duplicateDDWeek();closeMore('dd-csb')">📅 Dupliquer vers la semaine suivante →</button>
+                  <div class="csb-item-sep"></div>
+                  <button class="csb-item" onclick="openClientModal('dd');closeMore('dd-csb')">➕ Ajouter un client</button>
+                </div>
+              </div>
+            </div>
+            <button class="csb-save dd" id="dd-save-btn" onclick="saveDDWeek()">💾 Enregistrer</button>
+          </div>
+
         </div>
 
         <!-- Reçu DD -->
         <div id="dd-sub-recu" style="display:none">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-            <h2 style="margin:0;color:#1565c0">✅ Reçu — Distribution Directe</h2>
-            <input type="date" id="reception-date-dd" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderReceptionCircuit('dd')" style="padding:6px 14px;border-radius:20px;background:#1565c0;color:white;border:none;cursor:pointer;font-weight:700">🔄 Charger</button>
-            <button onclick="validerReceptionCircuit('dd')" style="padding:6px 16px;border-radius:20px;background:#2e7d32;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">✅ Enregistrer reçu</button>
+
+          <!-- ❶ QUAND ? + ❸ QUOI FAIRE ? → date + enregistrer dans une barre compacte -->
+          <div class="date-picker-bar">
+            <span class="dpb-label">Date</span>
+            <input type="date" id="reception-date-dd">
+            <button class="dpb-load" onclick="renderReceptionCircuit('dd')">🔄 Charger</button>
+            <button class="dpb-save" style="background:#1565c0" onclick="validerReceptionCircuit('dd')">✅ Enregistrer le reçu</button>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <button class="filter-btn active" id="rec-dd-view-prod" onclick="setRecView('dd','produit',this)">📦 Par produit</button>
-            <button class="filter-btn" id="rec-dd-view-client" onclick="setRecView('dd','client',this)">🏪 Par client</button>
+
+          <!-- ❷ COMMENT VOIR ? → Toggle contextuel -->
+          <div class="grid-view-bar gvb-dd">
+            <span class="gvb-label">Afficher par</span>
+            <div class="gvb-toggle">
+              <button class="gvb-btn active" id="rec-dd-view-prod"   onclick="setRecView('dd','produit',this)">📦 Produit</button>
+              <button class="gvb-btn"        id="rec-dd-view-client" onclick="setRecView('dd','client',this)">🏪 Client</button>
+            </div>
           </div>
-          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Quantités <strong>réellement livrées</strong> à chaque client Distribution Directe.</p>
+
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">Quantités <strong>réellement livrées</strong> à chaque client Distribution Directe.</p>
           <div id="reception-status-dd" style="margin-bottom:8px"></div>
           <div id="reception-content-dd"></div>
         </div>
 
         <!-- Livraison DD -->
         <div id="dd-sub-livraison" style="display:none">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-            <h2 style="margin:0;color:#283593">🚚 Livraison — Distribution Directe</h2>
-            <input type="date" id="livraison-date-dd" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderLivraison('dd')" style="padding:6px 14px;border-radius:20px;background:#283593;color:white;border:none;cursor:pointer;font-weight:700">🔄 Charger</button>
+          <div class="date-picker-bar">
+            <span class="dpb-label">Date de livraison</span>
+            <input type="date" id="livraison-date-dd">
+            <button class="dpb-load" onclick="renderLivraison('dd')">🔄 Charger</button>
           </div>
           <div id="livraison-status-dd" style="margin-bottom:10px"></div>
           <div id="livraison-content-dd"></div>
@@ -1066,16 +1952,20 @@
 
         <!-- Synthèse DD -->
         <div id="dd-sub-synthese" style="display:none">
-          <h2 style="color:#283593">📊 Synthèse — Distribution Directe</h2>
-          <div style="display:flex;gap:8px;margin-bottom:14px">
-            <button class="filter-btn active" id="dd-syn-hebdo" onclick="setSynMode('dd','hebdo',this)">📅 Hebdomadaire</button>
-            <button class="filter-btn" id="dd-syn-mensuel" onclick="setSynMode('dd','mensuel',this)">🗓️ Mensuel</button>
+
+          <!-- ❶ HORIZON : Hebdo / Mensuel -->
+          <div class="syn-tabs">
+            <button class="syn-tab active" id="dd-syn-hebdo"   onclick="setSynMode('dd','hebdo',this)">📅 Hebdomadaire</button>
+            <button class="syn-tab"        id="dd-syn-mensuel" onclick="setSynMode('dd','mensuel',this)">🗓️ Mensuel</button>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="dd-syn-nav">
-            <button onclick="synNav('dd',-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-            <strong id="dd-syn-label" style="font-size:0.9rem;color:#283593"></strong>
-            <button onclick="synNav('dd',0)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Actuel</button>
-            <button onclick="synNav('dd',1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
+
+          <!-- ❷ NAVIGATION dans la période -->
+          <div class="week-banner wb-dd" id="dd-syn-nav" style="margin-bottom:12px">
+            <button class="wb-arrow" onclick="synNav('dd',-1)">◀</button>
+            <div class="wb-center">
+              <span id="dd-syn-label" class="wb-date">—</span>
+            </div>
+            <button class="wb-arrow" onclick="synNav('dd',1)">▶</button>
           </div>
           <div id="dd-syn-content"></div>
         </div>
@@ -1085,74 +1975,105 @@
     <!-- ── CIRCUIT DISTRIBUTION PRESTATAIRE ── -->
     <div id="circuit-prest" style="display:none">
       <div class="card" style="margin-top:8px">
+        <!-- Bandeau contexte Prest -->
+        <div class="circuit-context-banner" style="background:#f3e5f5;color:#6a1b9a">
+          <span style="font-size:1.4rem">🏭</span>
+          <div>
+            <h3 style="color:#6a1b9a">Distribution Prestataire</h3>
+            <div class="meta">15 clients · 6 produits · Commandes fermes journalières</div>
+          </div>
+        </div>
+
         <!-- Sous-onglets Prest -->
-        <div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:14px;border:1px solid var(--border)">
-          <button id="prest-stab-commandes" onclick="showPrestSub('commandes')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:#6a1b9a;color:#fff">
+        <div class="subtab-bar">
+          <button id="prest-stab-commandes" class="subtab-btn st-prest active" onclick="showPrestSub('commandes')">
             📋 Commandes
           </button>
-          <button id="prest-stab-recu" onclick="showPrestSub('recu')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="prest-stab-recu" class="subtab-btn st-prest" onclick="showPrestSub('recu')">
             ✅ Reçu
           </button>
-          <button id="prest-stab-livraison" onclick="showPrestSub('livraison')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="prest-stab-livraison" class="subtab-btn st-prest" onclick="showPrestSub('livraison')">
             🚚 Livraison
           </button>
-          <button id="prest-stab-synthese" onclick="showPrestSub('synthese')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.82rem;background:transparent;color:var(--text)">
+          <button id="prest-stab-synthese" class="subtab-btn st-prest" onclick="showPrestSub('synthese')">
             📊 Synthèse
           </button>
         </div>
 
         <!-- Commandes Prest -->
         <div id="prest-sub-commandes">
-        <h2 style="color:#6a1b9a">🏭 Distribution Prestataire</h2>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
-          15 clients · 6 produits · Commandes fermes journalières
-        </p>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <button onclick="prestWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Semaine préc.</button>
-          <strong id="prest-week-label" style="font-size:0.9rem;color:#6a1b9a"></strong>
-          <button onclick="prestWeekNav(0)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Aujourd'hui</button>
-          <button onclick="prestWeekNav(1)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Semaine suiv. ▶</button>
-          <button onclick="loadPrestWeekRef()" style="padding:5px 14px;border-radius:20px;background:#f3e5f5;border:1px solid #ce93d8;color:#6a1b9a;cursor:pointer;font-weight:700;margin-left:auto">📋 Référence</button>
-          <button onclick="duplicatePrestWeek()" style="padding:5px 14px;border-radius:20px;background:#fff3e0;border:1px solid #ffcc80;color:#e65100;cursor:pointer;font-weight:700" title="Copier cette semaine sur la semaine suivante">📅 Dupliquer →</button>
-          <button onclick="savePrestWeek()" style="padding:5px 14px;border-radius:20px;background:#6a1b9a;color:white;border:none;cursor:pointer;font-weight:700">💾 Enregistrer</button>
-          <button onclick="pushPrestWeek()" style="padding:5px 14px;border-radius:20px;background:#4a148c;color:white;border:none;cursor:pointer;font-weight:700">☁️ Sync</button>
-          <button onclick="openClientModal('prest')" style="padding:5px 14px;border-radius:20px;background:#fff3e0;border:1px solid #ffcc80;color:#e65100;cursor:pointer;font-weight:700">➕ Client</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="filter-btn active" id="prest-view-prod" onclick="setPrestView('produit',this)">📦 Par produit</button>
-          <button class="filter-btn" id="prest-view-client" onclick="setPrestView('client',this)">🏪 Par client</button>
-        </div>
-        <div id="prest-grid"></div>
-        <div id="prest-week-recap" style="margin-top:16px"></div>
+
+          <!-- ❶ QUAND ? → Bannière semaine seule -->
+          <div class="week-banner wb-prest">
+            <button class="wb-arrow" onclick="prestWeekNav(-1)">◀</button>
+            <div class="wb-center">
+              <span class="wb-sublabel">Semaine des commandes</span>
+              <span id="prest-week-label" class="wb-date">—</span>
+              <button class="wb-today" onclick="prestWeekNav(0)">Semaine courante</button>
+            </div>
+            <button class="wb-arrow" onclick="prestWeekNav(1)">▶</button>
+          </div>
+
+          <!-- ❷ COMMENT VOIR ? → Toggle discret au-dessus du tableau -->
+          <div class="grid-view-bar gvb-prest">
+            <span class="gvb-label">Afficher par</span>
+            <div class="gvb-toggle">
+              <button class="gvb-btn active" id="prest-view-prod"    onclick="setPrestView('produit',this)">📦 Produit</button>
+              <button class="gvb-btn"        id="prest-view-client"  onclick="setPrestView('client',this)">🏪 Client</button>
+            </div>
+          </div>
+
+          <!-- Grille -->
+          <div id="prest-grid"></div>
+          <div id="prest-week-recap" style="margin-top:16px"></div>
+
+          <!-- ❸ QUOI FAIRE ? → Barre d'actions en bas -->
+          <div class="card-save-bar">
+            <div class="csb-left">
+              <span class="csb-unsaved-badge" id="prest-unsaved-badge">● Modifications non sauvegardées</span>
+              <button class="csb-sync" onclick="pushPrestWeek()" title="Synchroniser vers Supabase">☁️</button>
+              <div class="csb-more-wrap">
+                <button class="csb-more" onclick="openMore('prest-csb')">••• Plus</button>
+                <div class="csb-dropdown" id="prest-csb">
+                  <button class="csb-item" onclick="loadPrestWeekRef();closeMore('prest-csb')">📋 Charger la semaine de référence</button>
+                  <div class="csb-item-sep"></div>
+                  <button class="csb-item" onclick="duplicatePrestWeek();closeMore('prest-csb')">📅 Dupliquer vers la semaine suivante →</button>
+                  <div class="csb-item-sep"></div>
+                  <button class="csb-item" onclick="openClientModal('prest');closeMore('prest-csb')">➕ Ajouter un client</button>
+                </div>
+              </div>
+            </div>
+            <button class="csb-save prest" id="prest-save-btn" onclick="savePrestWeek()">💾 Enregistrer</button>
+          </div>
+
         </div>
 
         <!-- Reçu Prest -->
         <div id="prest-sub-recu" style="display:none">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-            <h2 style="margin:0;color:#6a1b9a">✅ Reçu — Prestataire</h2>
-            <input type="date" id="reception-date-prest" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderReceptionCircuit('prest')" style="padding:6px 14px;border-radius:20px;background:#6a1b9a;color:white;border:none;cursor:pointer;font-weight:700">🔄 Charger</button>
-            <button onclick="validerReceptionCircuit('prest')" style="padding:6px 16px;border-radius:20px;background:#2e7d32;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">✅ Enregistrer reçu</button>
+          <div class="date-picker-bar">
+            <span class="dpb-label">Date</span>
+            <input type="date" id="reception-date-prest">
+            <button class="dpb-load" onclick="renderReceptionCircuit('prest')">🔄 Charger</button>
+            <button class="dpb-save" style="background:#6a1b9a" onclick="validerReceptionCircuit('prest')">✅ Enregistrer le reçu</button>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <button class="filter-btn active" id="rec-prest-view-prod" onclick="setRecView('prest','produit',this)">📦 Par produit</button>
-            <button class="filter-btn" id="rec-prest-view-client" onclick="setRecView('prest','client',this)">🏪 Par client</button>
+          <div class="grid-view-bar gvb-prest">
+            <span class="gvb-label">Afficher par</span>
+            <div class="gvb-toggle">
+              <button class="gvb-btn active" id="rec-prest-view-prod"   onclick="setRecView('prest','produit',this)">📦 Produit</button>
+              <button class="gvb-btn"        id="rec-prest-view-client" onclick="setRecView('prest','client',this)">🏪 Client</button>
+            </div>
           </div>
-          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Quantités <strong>réellement livrées</strong> à chaque client Prestataire.</p>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">Quantités <strong>réellement livrées</strong> à chaque client Prestataire.</p>
           <div id="reception-status-prest" style="margin-bottom:8px"></div>
           <div id="reception-content-prest"></div>
         </div>
 
         <!-- Livraison Prest -->
         <div id="prest-sub-livraison" style="display:none">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-            <h2 style="margin:0;color:#880e4f">🚚 Livraison — Prestataire</h2>
-            <input type="date" id="livraison-date-prest" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderLivraison('prest')" style="padding:6px 14px;border-radius:20px;background:#880e4f;color:white;border:none;cursor:pointer;font-weight:700">🔄 Charger</button>
+          <div class="date-picker-bar">
+            <span class="dpb-label">Date de livraison</span>
+            <input type="date" id="livraison-date-prest">
+            <button class="dpb-load" onclick="renderLivraison('prest')">🔄 Charger</button>
           </div>
           <div id="livraison-status-prest" style="margin-bottom:10px"></div>
           <div id="livraison-content-prest"></div>
@@ -1160,16 +2081,16 @@
 
         <!-- Synthèse Prest -->
         <div id="prest-sub-synthese" style="display:none">
-          <h2 style="color:#880e4f">📊 Synthèse — Prestataire</h2>
-          <div style="display:flex;gap:8px;margin-bottom:14px">
-            <button class="filter-btn active" id="prest-syn-hebdo" onclick="setSynMode('prest','hebdo',this)">📅 Hebdomadaire</button>
-            <button class="filter-btn" id="prest-syn-mensuel" onclick="setSynMode('prest','mensuel',this)">🗓️ Mensuel</button>
+          <div class="syn-tabs">
+            <button class="syn-tab active prest" id="prest-syn-hebdo"   onclick="setSynMode('prest','hebdo',this)">📅 Hebdomadaire</button>
+            <button class="syn-tab prest"         id="prest-syn-mensuel" onclick="setSynMode('prest','mensuel',this)">🗓️ Mensuel</button>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="prest-syn-nav">
-            <button onclick="synNav('prest',-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-            <strong id="prest-syn-label" style="font-size:0.9rem;color:#880e4f"></strong>
-            <button onclick="synNav('prest',0)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Actuel</button>
-            <button onclick="synNav('prest',1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
+          <div class="week-banner wb-prest" id="prest-syn-nav" style="margin-bottom:12px">
+            <button class="wb-arrow" onclick="synNav('prest',-1)">◀</button>
+            <div class="wb-center">
+              <span id="prest-syn-label" class="wb-date">—</span>
+            </div>
+            <button class="wb-arrow" onclick="synNav('prest',1)">▶</button>
           </div>
           <div id="prest-syn-content"></div>
         </div>
@@ -1179,134 +2100,126 @@
     <!-- ── BON DE PRODUCTION ── -->
     <div id="circuit-bonprod" style="display:none">
       <div class="card" style="margin-top:8px">
-        <h2>🧾 Bon de Production</h2>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">
-          Total SBN + Particuliers + Directe + Prestataire
-        </p>
 
-        <!-- ── Barre CHEF (2 boutons) ── -->
-        <div id="bonprod-tabs-chef" style="display:none;gap:6px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:14px;border:1px solid var(--border)">
-          <button id="synth-tab-validation" onclick="showSynthView('validation')"
-            style="flex:1;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.85rem;background:#1b5e20;color:#fff">
-            ✅ Validation
-          </button>
-          <button id="synth-tab-bilan" onclick="showSynthView('bilan')"
-            style="flex:1;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.85rem;background:transparent;color:var(--text)">
-            📊 Bilan
-          </button>
-        </div>
-
-        <!-- ── Barre AUTRES (4+1 boutons) ── -->
-        <div id="bonprod-tabs-others" style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:14px;border:1px solid var(--border)">
-          <button id="synth-tab-validation-m" onclick="showSynthView('validation')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.78rem;background:transparent;color:var(--text)">
-            ✅ Validation
-          </button>
-          <button id="synth-tab-jour" onclick="showSynthView('jour')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.78rem;background:var(--primary);color:#fff">
-            📅 Jour
-          </button>
-          <button id="synth-tab-circuit" onclick="showSynthView('circuit')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.78rem;background:transparent;color:var(--text)">
-            🔀 Circuit
-          </button>
-          <button id="synth-tab-semaine" onclick="showSynthView('semaine')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.78rem;background:transparent;color:var(--text)">
-            📆 Semaine
-          </button>
-          <button id="synth-tab-mois" onclick="showSynthView('mois')"
-            style="flex:1;padding:7px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.78rem;background:transparent;color:var(--text)">
-            🗓️ Mois
-          </button>
-        </div>
-
-        <!-- ══ VUE VALIDATION (Chef + Manager) ══ -->
-        <div id="synth-view-validation" style="display:none">
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-            <button onclick="valWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-            <strong id="val-week-label" style="font-size:0.9rem;color:var(--primary)"></strong>
-            <button onclick="valWeekNav(0)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Cette semaine</button>
-            <button onclick="valWeekNav(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
+        <!-- Bandeau contexte -->
+        <div class="circuit-context-banner" style="background:#eceff1;color:#37474f">
+          <span style="font-size:1.4rem">🧾</span>
+          <div>
+            <h3 style="color:#37474f">Bon de Production</h3>
+            <div class="meta">Total consolidé · SBN + Particuliers + Directe + Prestataire</div>
           </div>
-          <!-- Bandeau statut + action globale -->
+        </div>
+
+        <!-- ── NIVEAU 1 : Mode principal ── -->
+        <div id="bonprod-tabs-chef" class="subtab-bar" style="display:none">
+          <button id="synth-tab-validation" class="subtab-btn st-bonprod active" onclick="showSynthMode('validation')">✅ Validation</button>
+          <button id="synth-tab-bonprod"    class="subtab-btn st-bonprod"        onclick="showSynthMode('bonprod')">📋 Bon de Production</button>
+        </div>
+        <div id="bonprod-tabs-others" class="subtab-bar" style="display:flex">
+          <button id="synth-tab-validation-m" class="subtab-btn st-bonprod"        onclick="showSynthMode('validation')">✅ Validation</button>
+          <button id="synth-tab-bonprod-m"    class="subtab-btn st-bonprod active" onclick="showSynthMode('bonprod')">📋 Bon de Production</button>
+        </div>
+
+        <!-- VUE VALIDATION -->
+        <div id="synth-view-validation" style="display:none">
+          <div class="week-banner" style="--wb-color:#37474f">
+            <button class="wb-arrow" onclick="valWeekNav(-1)">◀</button>
+            <div class="wb-center">
+              <span class="wb-sublabel">Semaine de validation</span>
+              <span id="val-week-label" class="wb-date">—</span>
+              <button class="wb-today" onclick="valWeekNav(0)">Semaine courante</button>
+            </div>
+            <button class="wb-arrow" onclick="valWeekNav(1)">▶</button>
+          </div>
           <div id="val-global-bar" style="margin-bottom:14px"></div>
-          <!-- Contenu validation par circuit -->
           <div id="val-validation-content"></div>
         </div>
 
-        <!-- ══ VUE BILAN (chef, sous-navigation simple vers les vues existantes) ══ -->
-        <div id="synth-view-bilan" style="display:none">
-          <div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:12px;border:1px solid var(--border)">
-            <button onclick="showBilanSub('jour')"    id="bilan-tab-jour"    style="flex:1;padding:6px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.8rem;background:var(--primary);color:#fff">📅 Jour</button>
-            <button onclick="showBilanSub('semaine')" id="bilan-tab-semaine" style="flex:1;padding:6px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.8rem;background:transparent;color:var(--text)">📆 Semaine</button>
-            <button onclick="showBilanSub('mois')"    id="bilan-tab-mois"    style="flex:1;padding:6px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:0.8rem;background:transparent;color:var(--text)">🗓️ Mois</button>
-          </div>
-          <div id="bilan-inner-content"></div>
-        </div>
+        <!-- VUE BON DE PRODUCTION -->
+        <div id="synth-view-bonprod" style="display:none">
 
-        <!-- Vue JOUR (tous rôles sauf chef direct) -->
-        <div id="synth-view-jour" style="display:none">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-            <input type="date" id="synthese-date" onchange="renderSynthese()"
-              style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderSynthese()" style="padding:7px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">🔄 Actualiser</button>
-            <button onclick="window.print()" style="padding:7px 14px;border-radius:20px;background:#37474f;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">🖨️ Imprimer</button>
+          <!-- NIVEAU 2 : Horizon temporel -->
+          <div class="subtab-bar" style="margin-bottom:0">
+            <button id="bp-tab-jour"    class="subtab-btn st-bonprod active" onclick="showBPHorizon('jour')">📅 Jour</button>
+            <button id="bp-tab-semaine" class="subtab-btn st-bonprod"        onclick="showBPHorizon('semaine')">📆 Semaine</button>
+            <button id="bp-tab-mois"    class="subtab-btn st-bonprod"        onclick="showBPHorizon('mois')">🗓️ Mois</button>
           </div>
-          <div id="chef-val-jour-toolbar" style="display:none;margin-bottom:12px">
-            <div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span style="font-size:0.85rem;font-weight:700;color:#1b5e20">👨‍🍳 Validation du jour :</span>
-              <div id="chef-jour-statut" style="font-size:0.82rem;color:#555"></div>
-              <button onclick="chefValiderJour()" style="margin-left:auto;padding:6px 16px;background:#1b5e20;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:800;font-size:0.82rem">✅ Valider ce jour</button>
+
+          <!-- ── HORIZON JOUR ── -->
+          <div id="bp-view-jour">
+            <!-- ❶ Date -->
+            <div class="date-picker-bar" style="border-color:#b0bec5">
+              <span class="dpb-label">Date</span>
+              <input type="date" id="synthese-date" onchange="renderBPJour()">
+              <button class="dpb-load" onclick="renderBPJour()">🔄</button>
+              <button class="dpb-load" style="margin-left:auto" onclick="window.print()">🖨️ Imprimer</button>
             </div>
-          </div>
-          <div id="synthese-content"></div>
-        </div>
-
-        <!-- Vue PAR CIRCUIT -->
-        <div id="synth-view-circuit" style="display:none">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-            <input type="date" id="synthese-circuit-date"
-              style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-            <button onclick="renderSyntheseParCircuit()" style="padding:7px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">🔄 Actualiser</button>
-            <button onclick="window.print()" style="padding:7px 14px;border-radius:20px;background:#37474f;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">🖨️ Imprimer</button>
-          </div>
-          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Cliquez sur un circuit pour voir le détail par client.</p>
-          <div id="synthese-circuit-content"></div>
-        </div>
-
-        <!-- Vue SEMAINE -->
-        <div id="synth-view-semaine" style="display:none">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-            <button onclick="synthWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-            <strong id="synth-week-label" style="font-size:0.9rem;color:var(--primary)"></strong>
-            <button onclick="synthWeekNav(0)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Cette semaine</button>
-            <button onclick="synthWeekNav(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
-            <button onclick="window.print()" style="padding:7px 14px;border-radius:20px;background:#37474f;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">🖨️ Imprimer</button>
-          </div>
-          <div id="chef-val-toolbar" style="display:none;margin-bottom:14px">
-            <div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span style="font-size:0.85rem;font-weight:700;color:#1b5e20">👨‍🍳 Validation semaine :</span>
-              <div id="chef-week-statut" style="font-size:0.82rem;color:#555"></div>
-              <div style="margin-left:auto;display:flex;gap:8px">
-                <button onclick="chefValiderSemaine()" id="btn-valider-semaine" style="padding:6px 16px;background:#1b5e20;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:800;font-size:0.82rem">✅ Valider</button>
-                <button onclick="chefResetSemaine()" style="padding:6px 14px;background:white;color:#c62828;border:1.5px solid #c62828;border-radius:20px;cursor:pointer;font-size:0.82rem">↩️</button>
+            <!-- ❷ Vue toggle — contextuel, au-dessus du contenu -->
+            <div class="grid-view-bar">
+              <span class="gvb-label">Afficher par</span>
+              <div class="gvb-toggle">
+                <button id="bp-pres-produit" class="gvb-btn active" onclick="showBPPres('produit')">🥖 Par produit</button>
+                <button id="bp-pres-client"  class="gvb-btn"        onclick="showBPPres('client')">👥 Par client</button>
               </div>
             </div>
+            <!-- Barre validation chef -->
+            <div id="chef-val-jour-toolbar" style="display:none;margin:0 0 12px">
+              <div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span style="font-size:0.85rem;font-weight:700;color:#1b5e20">👨‍🍳 Validation du jour :</span>
+                <div id="chef-jour-statut" style="font-size:0.82rem;color:#555"></div>
+                <button onclick="chefValiderJour()" style="margin-left:auto;padding:6px 16px;background:#1b5e20;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:800;font-size:0.82rem">✅ Valider ce jour</button>
+              </div>
+            </div>
+            <div id="bp-jour-produit"><div id="synthese-content"></div></div>
+            <div id="bp-jour-client"  style="display:none"><div id="synthese-circuit-content"></div></div>
           </div>
-          <div id="synthese-semaine-content"></div>
-        </div>
 
-        <!-- Vue MOIS -->
-        <div id="synth-view-mois" style="display:none">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-            <button onclick="synthMonthNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-            <strong id="synth-month-label" style="font-size:0.9rem;color:var(--primary)"></strong>
-            <button onclick="synthMonthNav(0)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Ce mois</button>
-            <button onclick="synthMonthNav(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
-            <button onclick="window.print()" style="padding:7px 14px;border-radius:20px;background:#37474f;color:white;border:none;cursor:pointer;font-weight:700;margin-left:auto">🖨️ Imprimer</button>
+          <!-- ── HORIZON SEMAINE ── -->
+          <div id="bp-view-semaine" style="display:none">
+            <div class="week-banner">
+              <button class="wb-arrow" onclick="synthWeekNav(-1)">◀</button>
+              <div class="wb-center">
+                <span class="wb-sublabel">Semaine de production</span>
+                <span id="synth-week-label" class="wb-date">—</span>
+                <button class="wb-today" onclick="synthWeekNav(0)">Semaine courante</button>
+              </div>
+              <button class="wb-arrow" onclick="synthWeekNav(1)">▶</button>
+            </div>
+            <div style="text-align:right;padding:4px 0 8px">
+              <button onclick="window.print()" style="padding:5px 14px;border-radius:16px;background:white;border:1.5px solid var(--border);cursor:pointer;font-size:0.78rem;color:var(--muted)">🖨️ Imprimer</button>
+            </div>
+            <div id="chef-val-toolbar" style="display:none;margin-bottom:14px">
+              <div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span style="font-size:0.85rem;font-weight:700;color:#1b5e20">👨‍🍳 Validation semaine :</span>
+                <div id="chef-week-statut" style="font-size:0.82rem;color:#555"></div>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                  <button onclick="chefValiderSemaine()" id="btn-valider-semaine" style="padding:6px 16px;background:#1b5e20;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:800;font-size:0.82rem">✅ Valider</button>
+                  <button onclick="chefResetSemaine()" style="padding:6px 14px;background:white;color:#c62828;border:1.5px solid #c62828;border-radius:20px;cursor:pointer;font-size:0.82rem">↩️</button>
+                </div>
+              </div>
+            </div>
+            <div id="synthese-semaine-content"></div>
           </div>
-          <div id="synthese-mois-content"></div>
-        </div>
+
+          <!-- ── HORIZON MOIS ── -->
+          <div id="bp-view-mois" style="display:none">
+            <div class="week-banner">
+              <button class="wb-arrow" onclick="synthMonthNav(-1)">◀</button>
+              <div class="wb-center">
+                <span class="wb-sublabel">Mois de production</span>
+                <span id="synth-month-label" class="wb-date">—</span>
+                <button class="wb-today" onclick="synthMonthNav(0)">Mois en cours</button>
+              </div>
+              <button class="wb-arrow" onclick="synthMonthNav(1)">▶</button>
+            </div>
+            <div style="text-align:right;padding:4px 0 8px">
+              <button onclick="window.print()" style="padding:5px 14px;border-radius:16px;background:white;border:1.5px solid var(--border);cursor:pointer;font-size:0.78rem;color:var(--muted)">🖨️ Imprimer</button>
+            </div>
+            <div id="synthese-mois-content"></div>
+          </div>
+
+        </div><!-- /synth-view-bonprod -->
+
       </div>
     </div>
 
@@ -1315,39 +2228,44 @@
 <!-- TAB BESOINS MATIÈRES PREMIÈRES -->
 <div id="tab-matieres" class="tab-content">
 
-  <!-- Sous-navigation interne -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-    <button class="filter-btn active" id="mp-sub-besoins"  onclick="setMPSub('besoins',this)">🧮 Besoins semaine</button>
-    <button class="filter-btn"        id="mp-sub-mp"       onclick="setMPSub('mp',this)">🥚 Matières premières</button>
-    <button class="filter-btn"        id="mp-sub-recettes" onclick="setMPSub('recettes',this)">📋 Recettes produits</button>
+  <!-- Sous-navigation principale -->
+  <div class="subtab-bar" style="margin-bottom:0">
+    <button class="subtab-btn active" id="mp-sub-besoins"  onclick="setMPSub('besoins',this)">🧮 Besoins semaine</button>
+    <button class="subtab-btn"        id="mp-sub-mp"       onclick="setMPSub('mp',this)">🥚 Matières premières</button>
+    <button class="subtab-btn"        id="mp-sub-recettes" onclick="setMPSub('recettes',this)">📋 Recettes produits</button>
   </div>
 
   <!-- ── VUE BESOINS ── -->
   <div id="mp-view-besoins">
     <div class="card">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-        <h2 style="margin-bottom:0">🧮 Estimation des besoins en matières premières</h2>
-        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button onclick="mpWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀ Préc.</button>
-          <strong id="mp-week-label" style="font-size:0.9rem;color:var(--primary)"></strong>
-          <button onclick="mpWeekNav(0)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Courante</button>
-          <button onclick="mpWeekNav(1)"  style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">Suiv. ▶</button>
-          <button onclick="renderMPBesoins()" style="padding:5px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">🔄 Calculer</button>
+      <!-- ❶ QUAND ? → Bannière semaine -->
+      <div class="week-banner">
+        <button class="wb-arrow" onclick="mpWeekNav(-1)">◀</button>
+        <div class="wb-center">
+          <span class="wb-sublabel">Semaine de calcul</span>
+          <span id="mp-week-label" class="wb-date">—</span>
+          <button class="wb-today" onclick="mpWeekNav(0)">Semaine courante</button>
         </div>
+        <button class="wb-arrow" onclick="mpWeekNav(1)">▶</button>
+      </div>
+      <!-- Sources + calcul -->
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 0 10px">
+        <span style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Sources incluses</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.85rem;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="mp-src-sbn"  checked onchange="renderMPBesoins()"> 🍞 SBN
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.85rem;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="mp-src-dd"   checked onchange="renderMPBesoins()"> 🚚 Directe
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.85rem;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="mp-src-prest" checked onchange="renderMPBesoins()"> 🏭 Prestataire
+        </label>
+        <button onclick="renderMPBesoins()" style="margin-left:auto;padding:7px 20px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:800;font-size:0.85rem">🔄 Calculer</button>
       </div>
       <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Agrégation des objectifs SBN + commandes Distribution Directe + Prestataire, croisés avec les recettes définies.</p>
-      <!-- Sources actives -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-        <span style="font-size:0.78rem;font-weight:700;color:var(--muted)">Sources :</span>
-        <label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;cursor:pointer"><input type="checkbox" id="mp-src-sbn"  checked onchange="renderMPBesoins()"> 🍞 SBN Objectifs</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;cursor:pointer"><input type="checkbox" id="mp-src-dd"   checked onchange="renderMPBesoins()"> 🚚 Distribution Directe</label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;cursor:pointer"><input type="checkbox" id="mp-src-prest" checked onchange="renderMPBesoins()"> 🏭 Prestataire</label>
-      </div>
       <div id="mp-diag" style="margin-bottom:12px"></div>
       <div id="mp-besoins-table"></div>
     </div>
-
-    <!-- Détail par produit -->
     <div class="card" id="mp-produits-card" style="display:none">
       <h2>📦 Détail par produit</h2>
       <div id="mp-produits-table"></div>
@@ -1357,14 +2275,13 @@
   <!-- ── VUE MATIÈRES PREMIÈRES ── -->
   <div id="mp-view-mp" style="display:none">
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-        <h2 style="margin-bottom:0">🥚 Référentiel Matières Premières</h2>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <span style="font-size:0.78rem;color:var(--muted);font-style:italic">Recettes estimées — à affiner avec vos fiches techniques</span>
-          <button class="btn btn-primary btn-sm" onclick="openMPModal()">➕ Ajouter</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <h2 style="margin:0">🥚 Référentiel Matières Premières</h2>
+          <p style="font-size:0.80rem;color:var(--muted);margin:3px 0 0;font-style:italic">Recettes estimées — à affiner avec vos fiches techniques</p>
         </div>
+        <button onclick="openMPModal()" style="padding:8px 20px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:800;font-size:0.85rem">➕ Ajouter</button>
       </div>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Définissez les matières premières utilisées dans vos recettes.</p>
       <div id="mp-list-table"></div>
     </div>
   </div>
@@ -1372,18 +2289,26 @@
   <!-- ── VUE RECETTES ── -->
   <div id="mp-view-recettes" style="display:none">
     <div class="card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <h2 style="margin-bottom:0">📋 Recettes par produit</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+        <h2 style="margin:0">📋 Recettes par produit</h2>
         <input type="text" id="recette-search" placeholder="🔍 Filtrer produits…" oninput="renderRecettesEditor()"
-          style="padding:7px 12px;border:1px solid var(--border);border-radius:20px;font-size:0.85rem;width:170px">
-        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span style="font-size:0.75rem;color:var(--muted);font-style:italic">⚗️ Valeurs estimées CAP</span>
-          <button onclick="validerToutEstime()" style="padding:6px 14px;border-radius:20px;background:#e3f2fd;border:1.5px solid #90caf9;color:#1565c0;cursor:pointer;font-weight:700;font-size:0.82rem" title="Confirmer toutes les estimations comme recettes réelles">✅ Tout valider</button>
-          <button onclick="ftPullAll()" style="padding:6px 14px;border-radius:20px;background:#e8f5e9;border:1px solid #a5d6a7;color:#2a8a50;cursor:pointer;font-weight:700;font-size:0.82rem">📥 Importer Supabase</button>
-          <button onclick="ftPushAll()" style="padding:6px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700;font-size:0.82rem">☁️ Sync → Supabase</button>
-        </div>
+          style="padding:7px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:0.85rem;width:180px">
       </div>
-      <div id="ft-sync-status"></div>
+      <div class="card-save-bar" style="margin-top:8px;padding-top:10px">
+        <div class="csb-left">
+          <span style="font-size:0.75rem;color:var(--muted);font-style:italic">⚗️ Valeurs estimées CAP</span>
+          <div class="csb-more-wrap">
+            <button class="csb-more" onclick="openMore('mp-rec-csb')">••• Options</button>
+            <div class="csb-dropdown" id="mp-rec-csb">
+              <button class="csb-item" onclick="validerToutEstime();closeMore('mp-rec-csb')">✅ Tout valider comme recettes réelles</button>
+              <div class="csb-item-sep"></div>
+              <button class="csb-item" onclick="ftPullAll();closeMore('mp-rec-csb')" style="color:#1565c0">📥 Importer depuis Supabase</button>
+            </div>
+          </div>
+        </div>
+        <button class="csb-save" onclick="ftPushAll()">☁️ Sync → Supabase</button>
+      </div>
+      <div id="ft-sync-status" style="margin-top:8px"></div>
       <div id="ft-stats-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:0.8rem"></div>
       <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Pour chaque produit, définissez les ingrédients et quantités nécessaires <strong>par unité produite</strong>. Les produits sans recette ne contribuent pas au calcul.</p>
       <div id="mp-recettes-list"></div>
@@ -1530,6 +2455,37 @@ function loginAs(role) {
   silentPullOnLogin();
   if (_autoSyncEnabled) { startPollSync(); _flushSyncQueue(); }
 }
+// ── Menus déroulants (ca- et csb-) ──
+function openMore(id) {
+  document.querySelectorAll('.ca-dropdown.open, .csb-dropdown.open').forEach(el => el.classList.remove('open'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+}
+function closeMore(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ca-more-wrap') && !e.target.closest('.csb-more-wrap')) {
+    document.querySelectorAll('.ca-dropdown.open, .csb-dropdown.open').forEach(el => el.classList.remove('open'));
+  }
+});
+
+// ── ÉTAT "NON SAUVEGARDÉ" ──
+// circuit : 'sbn' | 'dd' | 'prest'
+function markUnsaved(circuit) {
+  const btn   = document.getElementById(`${circuit}-save-btn`);
+  const badge = document.getElementById(`${circuit}-unsaved-badge`);
+  if (btn)   btn.classList.add('unsaved');
+  if (badge) badge.classList.add('visible');
+}
+function markSaved(circuit) {
+  const btn   = document.getElementById(`${circuit}-save-btn`);
+  const badge = document.getElementById(`${circuit}-unsaved-badge`);
+  if (btn)   btn.classList.remove('unsaved');
+  if (badge) badge.classList.remove('visible');
+}
+
 function logout() {
   _currentRole = null;
   stopPollSync();
@@ -1680,42 +2636,45 @@ const HARDCODED_API_KEY = '';
 const API_KEY_STORAGE = 'belnati_apikey';
 
 const FAMILIES = [
-  'Sandwichs & Snacking',
-  'Choux & Pâtisseries',
-  'Pains & Viennoiseries salées',
-  'Quatre-quarts',
-  'Puddings & Gâteaux locaux',
-  'Pains & Baguettes',
+  'Pains Classiques',
   'Pains Spéciaux BèlNati',
-  'Boissons',
-  'Autres'
+  'Viennoiseries',
+  'Feuilletés & Snacking Chaud',
+  'Sandwichs',
+  'Pâtisseries Classiques',
+  'Galettes Créoles',
+  'Gâteaux Traditionnels',
+  'Boissons Maison',
+  'Épicerie & Divers'
 ];
 
 // Abréviations des familles pour les onglets et labels courts
 const FAM_SHORT = {
-  'Sandwichs & Snacking':         'Sandwichs',
-  'Choux & Pâtisseries':          'Choux',
-  'Pains & Viennoiseries salées': 'Viennoiseries',
-  'Quatre-quarts':                'Quatre-quarts',
-  'Puddings & Gâteaux locaux':    'Puddings',
-  'Pains & Baguettes':            'Baguettes',
-  'Pains Spéciaux BèlNati':       'Spéciaux',
-  'Boissons':                     'Boissons',
-  'Autres':                       'Autres',
+  'Pains Classiques':            'Pains',
+  'Pains Spéciaux BèlNati':      'BèlNati',
+  'Viennoiseries':               'Viennois.',
+  'Feuilletés & Snacking Chaud': 'Snacking',
+  'Sandwichs':                   'Sandwichs',
+  'Pâtisseries Classiques':      'Pâtisseries',
+  'Galettes Créoles':            'Galettes',
+  'Gâteaux Traditionnels':       'Gâteaux',
+  'Boissons Maison':             'Boissons',
+  'Épicerie & Divers':           'Épicerie',
 };
 function famShort(f) { return FAM_SHORT[f] || f; }
 
 
 const FAMILY_ICONS = {
-  'Sandwichs & Snacking':'🥖',
-  'Choux & Pâtisseries':'🧁',
-  'Pains & Viennoiseries salées':'🥐',
-  'Quatre-quarts':'🍰',
-  'Puddings & Gâteaux locaux':'🍮',
-  'Pains & Baguettes':'🥖',
-  'Pains Spéciaux BèlNati':'🌿',
-  'Boissons':'🧃',
-  'Autres':'📦'
+  'Pains Classiques':            '🥖',
+  'Pains Spéciaux BèlNati':      '🌿',
+  'Viennoiseries':               '🥐',
+  'Feuilletés & Snacking Chaud': '🫓',
+  'Sandwichs':                   '🥪',
+  'Pâtisseries Classiques':      '🧁',
+  'Galettes Créoles':            '🌺',
+  'Gâteaux Traditionnels':       '🍰',
+  'Boissons Maison':             '🧃',
+  'Épicerie & Divers':           '📦'
 };
 
 const CHART_COLORS = ['#1a6b3c','#2a8a50','#f5a623','#e05252','#5b9bd5','#9c6fe4','#e07f3a','#26a69a'];
@@ -1725,119 +2684,119 @@ const CHART_COLORS = ['#1a6b3c','#2a8a50','#f5a623','#e05252','#5b9bd5','#9c6fe4
 // ================================================================
 const DEFAULT_CATALOG = [
   // SANDWICHS & SNACKING
-  {id:'s1', name:'Grand sandwich',               family:'Sandwichs & Snacking',         price:4.80},
-  {id:'s2', name:'Petit sandwich',               family:'Sandwichs & Snacking',         price:2.80},
-  {id:'s3', name:'Mini burger',                  family:'Sandwichs & Snacking',         price:2.50},
-  {id:'s4', name:'Boule sans sel',               family:'Sandwichs & Snacking',         price:0.50},
-  {id:'s5', name:'Pizza poulet',                 family:'Sandwichs & Snacking',         price:2.25},
-  {id:'s6', name:'Pizza lardons',                family:'Sandwichs & Snacking',         price:2.25},
-  {id:'s7', name:'Mini Poulet Sandwich',         family:'Sandwichs & Snacking',         price:2.80},
-  {id:'s15',name:'Part Pizza Jambon',              family:'Sandwichs & Snacking',         price:2.25},
-  {id:'s10',name:'Sandwich Thon',                 family:'Sandwichs & Snacking',         price:4.50},
-  {id:'s11',name:'Sandwich Viennois Thon Oeuf',   family:'Sandwichs & Snacking',         price:4.80},
-  {id:'s12',name:'Sandwich Viennois Poulet Fume', family:'Sandwichs & Snacking',         price:4.80},
-  {id:'s13',name:'Mini Burger Saucisson',          family:'Sandwichs & Snacking',         price:2.80},
-  {id:'s14',name:'Mini Burger Thon',               family:'Sandwichs & Snacking',         price:2.80},
-  {id:'s9', name:'Sandwich Jambon',               family:'Sandwichs & Snacking',         price:4.00},
-  {id:'s8', name:'Sandwich Saucisson grand',     family:'Sandwichs & Snacking',         price:4.80},
-  {id:'s16',name:'Sandwich Saucisson classique',   family:'Sandwichs & Snacking',         price:4.00},
+  {id:'s1', name:'Grand sandwich',               family:'Sandwichs',         price:4.80},
+  {id:'s2', name:'Petit sandwich',               family:'Sandwichs',         price:2.80},
+  {id:'s3', name:'Mini burger',                  family:'Sandwichs',         price:2.50},
+  {id:'s4', name:'Boule sans sel',               family:'Pains Classiques',         price:0.50},
+  {id:'s5', name:'Pizza poulet',                 family:'Feuilletés & Snacking Chaud',         price:2.25},
+  {id:'s6', name:'Pizza lardons',                family:'Feuilletés & Snacking Chaud',         price:2.25},
+  {id:'s7', name:'Mini Poulet Sandwich',         family:'Sandwichs',         price:2.80},
+  {id:'s15',name:'Part Pizza Jambon',              family:'Feuilletés & Snacking Chaud',         price:2.25},
+  {id:'s10',name:'Sandwich Thon',                 family:'Sandwichs',         price:4.50},
+  {id:'s11',name:'Sandwich Viennois Thon Oeuf',   family:'Sandwichs',         price:4.80},
+  {id:'s12',name:'Sandwich Viennois Poulet Fume', family:'Sandwichs',         price:4.80},
+  {id:'s13',name:'Mini Burger Saucisson',          family:'Sandwichs',         price:2.80},
+  {id:'s14',name:'Mini Burger Thon',               family:'Sandwichs',         price:2.80},
+  {id:'s9', name:'Sandwich Jambon',               family:'Sandwichs',         price:4.00},
+  {id:'s8', name:'Sandwich Saucisson grand',     family:'Sandwichs',         price:4.80},
+  {id:'s16',name:'Sandwich Saucisson classique',   family:'Sandwichs',         price:4.00},
   // CHOUX & PÂTISSERIES
-  {id:'p1', name:'Chou choco',                   family:'Choux & Pâtisseries',          price:2.00},
-  {id:'p2', name:'Chou caramel',                 family:'Choux & Pâtisseries',          price:2.00},
-  {id:'p3', name:'Chou à la crème',              family:'Choux & Pâtisseries',          price:2.00},
-  {id:'p4', name:'Biscuit à la vanille',         family:'Choux & Pâtisseries',          price:1.50},
-  {id:'p5', name:'Forêt noire (part)',            family:'Choux & Pâtisseries',          price:3.50},
-  {id:'p6', name:'Crème chantilly',              family:'Choux & Pâtisseries',          price:2.50},
-  {id:'p7', name:'Feuilleté aux Fruits',         family:'Choux & Pâtisseries',          price:3.00},
-  {id:'p8', name:'Biscuit Roulé Chantilly',      family:'Choux & Pâtisseries',          price:3.50},
-  {id:'p9', name:'Gâteau Mousse Chantilly',      family:'Choux & Pâtisseries',          price:3.50},
+  {id:'p1', name:'Chou choco',                   family:'Pâtisseries Classiques',          price:2.00},
+  {id:'p2', name:'Chou caramel',                 family:'Pâtisseries Classiques',          price:2.00},
+  {id:'p3', name:'Chou à la crème',              family:'Pâtisseries Classiques',          price:2.00},
+  {id:'p4', name:'Biscuit à la vanille',         family:'Pâtisseries Classiques',          price:1.50},
+  {id:'p5', name:'Forêt noire (part)',            family:'Pâtisseries Classiques',          price:3.50},
+  {id:'p6', name:'Crème chantilly',              family:'Pâtisseries Classiques',          price:2.50},
+  {id:'p7', name:'Feuilleté aux Fruits',         family:'Pâtisseries Classiques',          price:3.00},
+  {id:'p8', name:'Biscuit Roulé Chantilly',      family:'Pâtisseries Classiques',          price:3.50},
+  {id:'p9', name:'Gâteau Mousse Chantilly',      family:'Pâtisseries Classiques',          price:3.50},
   // PAINS & VIENNOISERIES SALÉES
-  {id:'v1', name:'Pain aux saucisses',           family:'Pains & Viennoiseries salées', price:1.55},
-  {id:'v2', name:'Bâtonnet Jambon Fromage',      family:'Pains & Viennoiseries salées', price:1.25},
-  {id:'v3', name:'Pâté chair à saucisse',        family:'Pains & Viennoiseries salées', price:0.90},
-  {id:'v4', name:'Pâté sardines',                family:'Pains & Viennoiseries salées', price:0.90},
-  {id:'v5', name:'Croissant Jambon Fromage',     family:'Pains & Viennoiseries salées', price:2.90},
-  {id:'v6', name:'Sacristain',                   family:'Pains & Viennoiseries salées', price:1.25},
-  {id:'v7', name:'Pain choco au beurre',         family:'Pains & Viennoiseries salées', price:1.55},
-  {id:'v8', name:'Mini pain raisin',             family:'Pains & Viennoiseries salées', price:0.90},
-  {id:'v9', name:'Mini croissant',               family:'Pains & Viennoiseries salées', price:0.80},
-  {id:'v10',name:'Croissant au beurre',          family:'Pains & Viennoiseries salées', price:1.45},
-  {id:'v11',name:'Croissant nature',             family:'Pains & Viennoiseries salées', price:1.30},
-  {id:'v12',name:'Pépito',                       family:'Pains & Viennoiseries salées', price:1.60},
-  {id:'v13',name:'Pain choco nature',            family:'Pains & Viennoiseries salées', price:1.35},
-  {id:'v14',name:'Sachet Mini Beurre',           family:'Pains & Viennoiseries salées', price:5.00},
-  {id:'v15',name:'Sachet Mini Céréales',         family:'Pains & Viennoiseries salées', price:5.00},
-  {id:'v16',name:'Pain au Raisin Brioche',       family:'Pains & Viennoiseries salées', price:1.55},
+  {id:'v1', name:'Pain aux saucisses',           family:'Feuilletés & Snacking Chaud', price:1.55},
+  {id:'v2', name:'Bâtonnet Jambon Fromage',      family:'Feuilletés & Snacking Chaud', price:1.25},
+  {id:'v3', name:'Pâté chair à saucisse',        family:'Feuilletés & Snacking Chaud', price:0.90},
+  {id:'v4', name:'Pâté sardines',                family:'Feuilletés & Snacking Chaud', price:0.90},
+  {id:'v5', name:'Croissant Jambon Fromage',     family:'Feuilletés & Snacking Chaud', price:2.90},
+  {id:'v6', name:'Sacristain',                   family:'Viennoiseries', price:1.25},
+  {id:'v7', name:'Pain choco au beurre',         family:'Viennoiseries', price:1.55},
+  {id:'v8', name:'Mini pain raisin',             family:'Viennoiseries', price:0.90},
+  {id:'v9', name:'Mini croissant',               family:'Viennoiseries', price:0.80},
+  {id:'v10',name:'Croissant au beurre',          family:'Viennoiseries', price:1.45},
+  {id:'v11',name:'Croissant nature',             family:'Viennoiseries', price:1.30},
+  {id:'v12',name:'Pépito',                       family:'Viennoiseries', price:1.60},
+  {id:'v13',name:'Pain choco nature',            family:'Viennoiseries', price:1.35},
+  {id:'v14',name:'Sachet Mini Beurre',           family:'Viennoiseries', price:5.00},
+  {id:'v15',name:'Sachet Mini Céréales',         family:'Viennoiseries', price:5.00},
+  {id:'v16',name:'Pain au Raisin Brioche',       family:'Viennoiseries', price:1.55},
   // QUATRE-QUARTS
-  {id:'q1', name:'Quatre-quarts nature',         family:'Quatre-quarts',                price:3.50},
-  {id:'q2', name:'Quatre-quarts banane',         family:'Quatre-quarts',                price:3.80},
-  {id:'q3', name:'Quatre-quarts pépites choco',  family:'Quatre-quarts',                price:4.00},
-  {id:'q4', name:'Quatre-quarts raisin',         family:'Quatre-quarts',                price:3.80},
-  {id:'q5', name:'Quatre-quarts chocolat',       family:'Quatre-quarts',                price:3.50},
-  {id:'q6', name:'Quatre-quarts créole',         family:'Quatre-quarts',                price:3.50},
+  {id:'q1', name:'Quatre-quarts nature',         family:'Gâteaux Traditionnels',                price:3.50},
+  {id:'q2', name:'Quatre-quarts banane',         family:'Gâteaux Traditionnels',                price:3.80},
+  {id:'q3', name:'Quatre-quarts pépites choco',  family:'Gâteaux Traditionnels',                price:4.00},
+  {id:'q4', name:'Quatre-quarts raisin',         family:'Gâteaux Traditionnels',                price:3.80},
+  {id:'q5', name:'Quatre-quarts chocolat',       family:'Gâteaux Traditionnels',                price:3.50},
+  {id:'q6', name:'Quatre-quarts créole',         family:'Gâteaux Traditionnels',                price:3.50},
   // PUDDINGS & GÂTEAUX LOCAUX
-  {id:'pu3',name:'Pudding raisins (part)',         family:'Puddings & Gâteaux locaux',    price:3.50},
-  {id:'pu1',name:'Pudding nature (part)',        family:'Puddings & Gâteaux locaux',    price:3.50},
-  {id:'pu2',name:'Pudding cramanioc (part)',     family:'Puddings & Gâteaux locaux',    price:2.50},
+  {id:'pu3',name:'Pudding raisins (part)',         family:'Gâteaux Traditionnels',    price:3.50},
+  {id:'pu1',name:'Pudding nature (part)',        family:'Gâteaux Traditionnels',    price:3.50},
+  {id:'pu2',name:'Pudding cramanioc (part)',     family:'Gâteaux Traditionnels',    price:2.50},
   // PAINS & BAGUETTES
-  {id:'bg1',name:'Baguette nature (200g)',       family:'Pains & Baguettes',            price:0.95},
-  {id:'bg2',name:'Baguette beurre',              family:'Pains & Baguettes',            price:1.40},
-  {id:'bg3',name:'Baguette céréales',            family:'Pains & Baguettes',            price:1.35},
-  {id:'bg4',name:'Baguette complète',            family:'Pains & Baguettes',            price:1.35},
-  {id:'bg5',name:'Pain complet tranché',         family:'Pains & Baguettes',            price:2.20},
+  {id:'bg1',name:'Baguette nature (200g)',       family:'Pains Classiques',            price:0.95},
+  {id:'bg2',name:'Baguette beurre',              family:'Pains Classiques',            price:1.40},
+  {id:'bg3',name:'Baguette céréales',            family:'Pains Classiques',            price:1.35},
+  {id:'bg4',name:'Baguette complète',            family:'Pains Classiques',            price:1.35},
+  {id:'bg5',name:'Pain complet tranché',         family:'Pains Classiques',            price:2.20},
   // CHOUX & PÂTISSERIES – complément
-  {id:'p10',name:'Mousse Choco',                 family:'Choux & Pâtisseries',          price:3.50},
-  {id:'p11',name:'Pomme Cannelle nature',         family:'Choux & Pâtisseries',          price:1.40},
-  {id:'p12',name:'Pomme Cannelle choco',          family:'Choux & Pâtisseries',          price:1.80},
-  {id:'p13',name:'Chausson Pomme',                family:'Choux & Pâtisseries',          price:1.45},
-  {id:'p14',name:'Quiche',                        family:'Choux & Pâtisseries',          price:3.10},
-  {id:'p15',name:'Biscuit Roulé Vanille',         family:'Choux & Pâtisseries',          price:3.50},
+  {id:'p10',name:'Mousse Choco',                 family:'Pâtisseries Classiques',          price:3.50},
+  {id:'p11',name:'Pomme Cannelle nature',         family:'Viennoiseries',          price:1.40},
+  {id:'p12',name:'Pomme Cannelle choco',          family:'Viennoiseries',          price:1.80},
+  {id:'p13',name:'Chausson Pomme',                family:'Viennoiseries',          price:1.45},
+  {id:'p14',name:'Quiche',                        family:'Feuilletés & Snacking Chaud',          price:3.10},
+  {id:'p15',name:'Biscuit Roulé Vanille',         family:'Pâtisseries Classiques',          price:3.50},
   // PAINS & VIENNOISERIES SALÉES – complément
   // (Pain Naté, Pain Brioche Choco ajoutés)
-  {id:'v27',name:'Feuillete Coco (viennoiserie)',  family:'Pains & Viennoiseries salées', price:1.65},
-  {id:'v23',name:'Chausson Poulet',               family:'Pains & Viennoiseries salées', price:1.95},
-  {id:'v17',name:'Pain Naté',                     family:'Pains & Viennoiseries salées', price:1.75},
-  {id:'v18',name:'Pain Brioche Choco',            family:'Pains & Viennoiseries salées', price:1.80},
+  {id:'v27',name:'Feuillete Coco (viennoiserie)',  family:'Viennoiseries', price:1.65},
+  {id:'v23',name:'Chausson Poulet',               family:'Feuilletés & Snacking Chaud', price:1.95},
+  {id:'v17',name:'Pain Naté',                     family:'Viennoiseries', price:1.75},
+  {id:'v18',name:'Pain Brioche Choco',            family:'Viennoiseries', price:1.80},
   // PAINS & BAGUETTES – complément
-  {id:'bg6', name:'Baguette sans sel',             family:'Pains & Baguettes',            price:0.95},
-  {id:'bg7', name:'Baguette 250g',                 family:'Pains & Baguettes',            price:1.00},
-  {id:'bg8', name:'Boule Anis',                    family:'Pains & Baguettes',            price:1.10},
-  {id:'bg9', name:'Sachet Boule Créole',           family:'Pains & Baguettes',            price:1.00},
-  {id:'bg10',name:'Sachet Complet',                family:'Pains & Baguettes',            price:5.00},
-  {id:'bg14',name:'Mini baguette cereales',        family:'Pains & Baguettes',            price:0.55},
-  {id:'bg15',name:'Boule cereales',                family:'Pains & Baguettes',            price:0.55},
-  {id:'bg11',name:'Mini baguette',                 family:'Pains & Baguettes',            price:0.50},
-  {id:'bg12',name:'Lot Mini baguettes',             family:'Pains & Baguettes',            price:5.00},
-  {id:'bg13',name:'Baguette BèlNati (250g)',         family:'Pains & Baguettes',            price:1.60},
+  {id:'bg6', name:'Baguette sans sel',             family:'Pains Classiques',            price:0.95},
+  {id:'bg7', name:'Baguette 250g',                 family:'Pains Classiques',            price:1.00},
+  {id:'bg8', name:'Boule Anis',                    family:'Pains Classiques',            price:1.10},
+  {id:'bg9', name:'Sachet Boule Créole',           family:'Pains Classiques',            price:1.00},
+  {id:'bg10',name:'Sachet Complet',                family:'Pains Classiques',            price:5.00},
+  {id:'bg14',name:'Mini baguette cereales',        family:'Pains Classiques',            price:0.55},
+  {id:'bg15',name:'Boule cereales',                family:'Pains Classiques',            price:0.55},
+  {id:'bg11',name:'Mini baguette',                 family:'Pains Classiques',            price:0.50},
+  {id:'bg12',name:'Lot Mini baguettes',             family:'Pains Classiques',            price:5.00},
+  {id:'bg13',name:'Baguette BèlNati (250g)',         family:'Pains Spéciaux BèlNati',            price:1.60},
   // PAINS & VIENNOISERIES – complément
-  {id:'v19', name:'Mini pain complet',             family:'Pains & Viennoiseries salées', price:0.55},
-  {id:'v20', name:'Mini pain céréales',            family:'Pains & Viennoiseries salées', price:0.55},
-  {id:'v21', name:'Petit pain au beurre',          family:'Pains & Viennoiseries salées', price:0.55},
-  {id:'v22', name:'Mini pain charbon',             family:'Pains & Viennoiseries salées', price:1.00},
-  {id:'v24',name:'Petit pain Curcuma Gingembre',  family:'Pains & Viennoiseries salées', price:1.00},
-  {id:'v25',name:'Petit pain Curcuma',             family:'Pains & Viennoiseries salées', price:1.00},
-  {id:'v26',name:'Petit pain Gingembre',           family:'Pains & Viennoiseries salées', price:1.00},
+  {id:'v19', name:'Mini pain complet',             family:'Pains Classiques', price:0.55},
+  {id:'v20', name:'Mini pain céréales',            family:'Pains Classiques', price:0.55},
+  {id:'v21', name:'Petit pain au beurre',          family:'Pains Classiques', price:0.55},
+  {id:'v22', name:'Mini pain charbon',             family:'Pains Spéciaux BèlNati', price:1.00},
+  {id:'v24',name:'Petit pain Curcuma Gingembre',  family:'Pains Spéciaux BèlNati', price:1.00},
+  {id:'v25',name:'Petit pain Curcuma',             family:'Pains Spéciaux BèlNati', price:1.00},
+  {id:'v26',name:'Petit pain Gingembre',           family:'Pains Spéciaux BèlNati', price:1.00},
   // QUATRE-QUARTS – complement
-  {id:'q7',  name:'Quatre-quarts marbré',          family:'Quatre-quarts',                price:3.50},
+  {id:'q7',  name:'Quatre-quarts marbré',          family:'Gâteaux Traditionnels',                price:3.50},
   // CHOUX & PÂTISSERIES – complément
-  {id:'p17e',name:'Galette Frangipane entiere (9p)', family:'Choux & Pâtisseries',      price:39.00},
-  {id:'p17',name:'Part Galette Frangipane',       family:'Choux & Pâtisseries',          price:3.50},
-  {id:'p18',name:'Part Galette Coco',              family:'Choux & Pâtisseries',          price:4.20},
-  {id:'p19',name:'Tarte aux Fruits',               family:'Choux & Pâtisseries',          price:4.50},
-  {id:'p23e',name:'Galette SS Gluten Goyave (entiere)', family:'Choux & Pâtisseries',     price:25.00},
-  {id:'p24e',name:'Galette SS Gluten Coco (entiere)',   family:'Choux & Pâtisseries',     price:25.00},
-  {id:'p25e',name:'Galette SS Gluten Ananas (entiere)', family:'Choux & Pâtisseries',     price:33.00},
-  {id:'p28',name:'Galette Creole Gluten (part)',        family:'Choux & Pâtisseries',     price:3.80},
-  {id:'p29',name:'Galette Creole Goyave Gluten (part)', family:'Choux & Pâtisseries',    price:3.80},
-  {id:'p30',name:'Cafe Coco',                          family:'Choux & Pâtisseries',     price:3.50},
-  {id:'p24',name:'Galette SS Gluten Creme',        family:'Choux & Pâtisseries',          price:4.20},
-  {id:'p25',name:'Galette SS Gluten Ananas',       family:'Choux & Pâtisseries',          price:4.20},
-  {id:'p26',name:'Galette SS Gluten Coco',         family:'Choux & Pâtisseries',          price:4.20},
-  {id:'p27',name:'Mousse Passion Gateau',          family:'Choux & Pâtisseries',          price:4.50},
-  {id:'p20',name:'Gateau Mousse Maracudja',       family:'Choux & Pâtisseries',          price:4.50},
-  {id:'p21',name:'Biscuit Roule Choco',            family:'Choux & Pâtisseries',          price:3.50},
-  {id:'p22',name:'Galette Creole (part)',           family:'Choux & Pâtisseries',          price:4.20},
-  {id:'p16', name:'Mont Blanc',                    family:'Choux & Pâtisseries',          price:3.00},
+  {id:'p17e',name:'Galette Frangipane entiere (9p)', family:'Galettes Créoles',      price:39.00},
+  {id:'p17',name:'Part Galette Frangipane',       family:'Galettes Créoles',          price:3.50},
+  {id:'p18',name:'Part Galette Coco',              family:'Galettes Créoles',          price:4.20},
+  {id:'p19',name:'Tarte aux Fruits',               family:'Pâtisseries Classiques',          price:4.50},
+  {id:'p23e',name:'Galette SS Gluten Goyave (entiere)', family:'Galettes Créoles',     price:25.00},
+  {id:'p24e',name:'Galette SS Gluten Coco (entiere)',   family:'Galettes Créoles',     price:25.00},
+  {id:'p25e',name:'Galette SS Gluten Ananas (entiere)', family:'Galettes Créoles',     price:33.00},
+  {id:'p28',name:'Galette Creole Gluten (part)',        family:'Galettes Créoles',     price:3.80},
+  {id:'p29',name:'Galette Creole Goyave Gluten (part)', family:'Galettes Créoles',    price:3.80},
+  {id:'p30',name:'Cafe Coco',                          family:'Pâtisseries Classiques',     price:3.50},
+  {id:'p24',name:'Galette SS Gluten Creme',        family:'Galettes Créoles',          price:4.20},
+  {id:'p25',name:'Galette SS Gluten Ananas',       family:'Galettes Créoles',          price:4.20},
+  {id:'p26',name:'Galette SS Gluten Coco',         family:'Galettes Créoles',          price:4.20},
+  {id:'p27',name:'Mousse Passion Gateau',          family:'Pâtisseries Classiques',          price:4.50},
+  {id:'p20',name:'Gateau Mousse Maracudja',       family:'Pâtisseries Classiques',          price:4.50},
+  {id:'p21',name:'Biscuit Roule Choco',            family:'Pâtisseries Classiques',          price:3.50},
+  {id:'p22',name:'Galette Creole (part)',           family:'Galettes Créoles',          price:4.20},
+  {id:'p16', name:'Mont Blanc',                    family:'Pâtisseries Classiques',          price:3.00},
   // PAINS SPÉCIAUX BÈLNATI – 3 tailles
   // Grand (300g)
   {id:'sp1', name:'Pain Spécial Nature (300g)',    family:'Pains Spéciaux BèlNati',       price:3.00},
@@ -1854,60 +2813,60 @@ const DEFAULT_CATALOG = [
   {id:'sp10',name:'Petit Pain Spécial Gingembre',  family:'Pains Spéciaux BèlNati',       price:1.00},
 
   // PRODUITS HISTORIQUES (prix à compléter dans l'app)
-  {id:'nx1', name:'Galette Créole Crème (part)', family:'Choux & Pâtisseries', price:0},
-  {id:'nx2', name:'Galette Créole Goyave (part)', family:'Choux & Pâtisseries', price:0},
-  {id:'nx3', name:'Galette Créole Passion (part)', family:'Choux & Pâtisseries', price:0},
-  {id:'nx4', name:'Galette Créole SS Gluten Crème (part)', family:'Choux & Pâtisseries', price:0},
-  {id:'nx5', name:'Gâteau à l\'Ananas', family:'Choux & Pâtisseries', price:0},
-  {id:'nx6', name:'Gâteau Nature', family:'Choux & Pâtisseries', price:0},
-  {id:'nx7', name:'Gâteau Coco', family:'Choux & Pâtisseries', price:0},
-  {id:'nx8', name:'Gâteau Marbré Chocolat', family:'Choux & Pâtisseries', price:0},
-  {id:'nx9', name:'Moelleux (choco/pépite/coco/nature)', family:'Choux & Pâtisseries', price:0},
-  {id:'nx10', name:'Tropézienne', family:'Choux & Pâtisseries', price:0},
-  {id:'nx11', name:'Dizé Milé', family:'Puddings & Gâteaux locaux', price:0},
-  {id:'nx12', name:'Gâteau Mousse Mombin', family:'Choux & Pâtisseries', price:0},
-  {id:'nx13', name:'Gâteau Vanille/Choco', family:'Choux & Pâtisseries', price:0},
-  {id:'nx14', name:'Mousse Cupuaçu', family:'Choux & Pâtisseries', price:0},
-  {id:'nx15', name:'Mini Tartelette Maracudja', family:'Choux & Pâtisseries', price:0},
-  {id:'nx16', name:'Mini Tartelette Chocolat', family:'Choux & Pâtisseries', price:0},
-  {id:'nx17', name:'Mini Tartelette Amandes', family:'Choux & Pâtisseries', price:0},
-  {id:'nx18', name:'Tartelette Fruit Crème', family:'Choux & Pâtisseries', price:0},
-  {id:'nx19', name:'Tartelette Chocolat', family:'Choux & Pâtisseries', price:0},
-  {id:'nx20', name:'Tartelette Amandine', family:'Choux & Pâtisseries', price:0},
-  {id:'nx21', name:'QQ SS Gluten Nature', family:'Quatre-quarts', price:0},
-  {id:'nx22', name:'QQ SS Gluten Marbré', family:'Quatre-quarts', price:0},
-  {id:'nx23', name:'QQ SS Gluten Raisin', family:'Quatre-quarts', price:0},
-  {id:'nx24', name:'QQ SS Gluten Ananas', family:'Quatre-quarts', price:0},
-  {id:'nx25', name:'QQ SS Gluten Oseille', family:'Quatre-quarts', price:0},
-  {id:'nx26', name:'Croissant Fourré Ananas', family:'Pains & Viennoiseries salées', price:0},
-  {id:'nx27', name:'Croissant Fourré Choco', family:'Pains & Viennoiseries salées', price:0},
-  {id:'nx28', name:'Pain Choco Fourré Choco', family:'Pains & Viennoiseries salées', price:0},
-  {id:'nx29', name:'Sandwich Mini Rond Charbon Saucisson', family:'Sandwichs & Snacking', price:0},
-  {id:'nx30', name:'Sandwich Mini Rond Thon', family:'Sandwichs & Snacking', price:0},
-  {id:'nx31', name:'Sandwich Mini Rond JF', family:'Sandwichs & Snacking', price:0},
-  {id:'nx32', name:'Sandwich Mini Rond Poulet', family:'Sandwichs & Snacking', price:0},
-  {id:'nx33', name:'Sandwich Mini Rond Curcuma Poulet', family:'Sandwichs & Snacking', price:0},
-  {id:'nx34', name:'Sandwich Mini Rond Curcuma JF', family:'Sandwichs & Snacking', price:0},
-  {id:'nx35', name:'Grand Sandwich Classique JF', family:'Sandwichs & Snacking', price:0},
-  {id:'nx36', name:'Grand Sandwich Classique Saucisson', family:'Sandwichs & Snacking', price:0},
-  {id:'nx37', name:'Grand Sandwich Classique Thon Mayo', family:'Sandwichs & Snacking', price:0},
-  {id:'nx38', name:'Grand Sandwich Classique Poulet', family:'Sandwichs & Snacking', price:0},
+  {id:'nx1', name:'Galette Créole Crème (part)', family:'Galettes Créoles', price:0},
+  {id:'nx2', name:'Galette Créole Goyave (part)', family:'Galettes Créoles', price:0},
+  {id:'nx3', name:'Galette Créole Passion (part)', family:'Galettes Créoles', price:0},
+  {id:'nx4', name:'Galette Créole SS Gluten Crème (part)', family:'Galettes Créoles', price:0},
+  {id:'nx5', name:'Gâteau à l\'Ananas', family:'Pâtisseries Classiques', price:0},
+  {id:'nx6', name:'Gâteau Nature', family:'Pâtisseries Classiques', price:0},
+  {id:'nx7', name:'Gâteau Coco', family:'Pâtisseries Classiques', price:0},
+  {id:'nx8', name:'Gâteau Marbré Chocolat', family:'Pâtisseries Classiques', price:0},
+  {id:'nx9', name:'Moelleux (choco/pépite/coco/nature)', family:'Pâtisseries Classiques', price:0},
+  {id:'nx10', name:'Tropézienne', family:'Pâtisseries Classiques', price:0},
+  {id:'nx11', name:'Dizé Milé', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx12', name:'Gâteau Mousse Mombin', family:'Pâtisseries Classiques', price:0},
+  {id:'nx13', name:'Gâteau Vanille/Choco', family:'Pâtisseries Classiques', price:0},
+  {id:'nx14', name:'Mousse Cupuaçu', family:'Pâtisseries Classiques', price:0},
+  {id:'nx15', name:'Mini Tartelette Maracudja', family:'Pâtisseries Classiques', price:0},
+  {id:'nx16', name:'Mini Tartelette Chocolat', family:'Pâtisseries Classiques', price:0},
+  {id:'nx17', name:'Mini Tartelette Amandes', family:'Pâtisseries Classiques', price:0},
+  {id:'nx18', name:'Tartelette Fruit Crème', family:'Pâtisseries Classiques', price:0},
+  {id:'nx19', name:'Tartelette Chocolat', family:'Pâtisseries Classiques', price:0},
+  {id:'nx20', name:'Tartelette Amandine', family:'Pâtisseries Classiques', price:0},
+  {id:'nx21', name:'QQ SS Gluten Nature', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx22', name:'QQ SS Gluten Marbré', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx23', name:'QQ SS Gluten Raisin', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx24', name:'QQ SS Gluten Ananas', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx25', name:'QQ SS Gluten Oseille', family:'Gâteaux Traditionnels', price:0},
+  {id:'nx26', name:'Croissant Fourré Ananas', family:'Viennoiseries', price:0},
+  {id:'nx27', name:'Croissant Fourré Choco', family:'Viennoiseries', price:0},
+  {id:'nx28', name:'Pain Choco Fourré Choco', family:'Viennoiseries', price:0},
+  {id:'nx29', name:'Sandwich Mini Rond Charbon Saucisson', family:'Sandwichs', price:0},
+  {id:'nx30', name:'Sandwich Mini Rond Thon', family:'Sandwichs', price:0},
+  {id:'nx31', name:'Sandwich Mini Rond JF', family:'Sandwichs', price:0},
+  {id:'nx32', name:'Sandwich Mini Rond Poulet', family:'Sandwichs', price:0},
+  {id:'nx33', name:'Sandwich Mini Rond Curcuma Poulet', family:'Sandwichs', price:0},
+  {id:'nx34', name:'Sandwich Mini Rond Curcuma JF', family:'Sandwichs', price:0},
+  {id:'nx35', name:'Grand Sandwich Classique JF', family:'Sandwichs', price:0},
+  {id:'nx36', name:'Grand Sandwich Classique Saucisson', family:'Sandwichs', price:0},
+  {id:'nx37', name:'Grand Sandwich Classique Thon Mayo', family:'Sandwichs', price:0},
+  {id:'nx38', name:'Grand Sandwich Classique Poulet', family:'Sandwichs', price:0},
   // BOISSONS – 2 formats (33cl = 3€ / 50cl = 3,50€)
-  {id:'b1', name:'Thé glacé (33cl)',             family:'Boissons',                     price:3.00},
-  {id:'b2', name:'Mombin (33cl)',                family:'Boissons',                     price:3.00},
-  {id:'b3', name:'Gingembre citron (33cl)',      family:'Boissons',                     price:3.00},
-  {id:'b4', name:'Maracudja menthe (33cl)',      family:'Boissons',                     price:3.00},
-  {id:'b5', name:'Curcuma gingembre (33cl)',     family:'Boissons',                     price:3.00},
-  {id:'b6', name:'Thé glacé (50cl)',             family:'Boissons',                     price:3.50},
-  {id:'b7', name:'Mombin (50cl)',                family:'Boissons',                     price:3.50},
-  {id:'b8', name:'Gingembre citron (50cl)',      family:'Boissons',                     price:3.50},
-  {id:'b9', name:'Maracudja menthe (50cl)',      family:'Boissons',                     price:3.50},
-  {id:'b10',name:'Curcuma gingembre (50cl)',     family:'Boissons',                     price:3.50},
-  {id:'b11', name:'Jus Cerise (33cl)',            family:'Boissons',                     price:3.00},
+  {id:'b1', name:'Thé glacé (33cl)',             family:'Boissons Maison',                     price:3.00},
+  {id:'b2', name:'Mombin (33cl)',                family:'Boissons Maison',                     price:3.00},
+  {id:'b3', name:'Gingembre citron (33cl)',      family:'Boissons Maison',                     price:3.00},
+  {id:'b4', name:'Maracudja menthe (33cl)',      family:'Boissons Maison',                     price:3.00},
+  {id:'b5', name:'Curcuma gingembre (33cl)',     family:'Boissons Maison',                     price:3.00},
+  {id:'b6', name:'Thé glacé (50cl)',             family:'Boissons Maison',                     price:3.50},
+  {id:'b7', name:'Mombin (50cl)',                family:'Boissons Maison',                     price:3.50},
+  {id:'b8', name:'Gingembre citron (50cl)',      family:'Boissons Maison',                     price:3.50},
+  {id:'b9', name:'Maracudja menthe (50cl)',      family:'Boissons Maison',                     price:3.50},
+  {id:'b10',name:'Curcuma gingembre (50cl)',     family:'Boissons Maison',                     price:3.50},
+  {id:'b11', name:'Jus Cerise (33cl)',            family:'Boissons Maison',                     price:3.00},
   // AUTRES
-  {id:'a1', name:'Pain grillé',                  family:'Autres',                       price:1.90},
-  {id:'a2', name:'Couac',                        family:'Autres',                       price:1.50},
-  {id:'a3', name:'Paquet Toast',                 family:'Autres',                       price:1.50},
+  {id:'a1', name:'Pain grillé',                  family:'Épicerie & Divers',                       price:1.90},
+  {id:'a2', name:'Couac',                        family:'Épicerie & Divers',                       price:1.50},
+  {id:'a3', name:'Paquet Toast',                 family:'Épicerie & Divers',                       price:1.50},
 ];
 
 // ================================================================
@@ -3611,10 +4570,11 @@ function renderMPList() {
 let _recetteOpenIds = new Set(); // produits dont l'éditeur est ouvert
 
 function renderRecettesEditor() {
+  upgradeSearchInput('recette-search');
   const el = document.getElementById('mp-recettes-list');
   if (!el) return;
-  const q = (document.getElementById('recette-search')?.value||'').toLowerCase();
-  const catalog = (appData.catalog||[]).filter(p => !q || p.name.toLowerCase().includes(q) || p.family.toLowerCase().includes(q));
+  const q = (document.getElementById('recette-search')?.value||'').trim();
+  const catalog = (appData.catalog||[]).filter(p => univMatch(q, p.name, p.family));
   if (!catalog.length) { el.innerHTML = `<div class="empty"><p>Aucun produit trouvé.</p></div>`; return; }
 
   // ── Stats bar ──
@@ -3654,7 +4614,7 @@ function renderRecettesEditor() {
         : '';
       html += `<div style="margin-bottom:4px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
         <div onclick="toggleRecette('${p.id}')" style="display:flex;align-items:center;padding:8px 14px;background:${isOpen?'rgba(26,107,60,0.05)':'white'};cursor:pointer;gap:8px;user-select:none">
-          <span style="flex:1;font-size:0.88rem;font-weight:600">${p.name}</span>
+          <span style="flex:1;font-size:0.88rem;font-weight:600">${univHighlight(p.name, q)}</span>
           <span style="font-size:0.75rem;color:var(--muted)">${p.price>0?p.price.toFixed(2)+' €':''}</span>
           ${srcBadge}
           ${nbIng>0
@@ -4373,13 +5333,14 @@ function loadData() {
       if (!appData.recettes || appData.recettes.length === 0) {
         appData.recettes = JSON.parse(JSON.stringify(RECETTES_DEFAULT)).map(r=>({...r, _source:'estime'}));
       } else {
-        // Compléter avec les recettes estimées manquantes (ne pas écraser les saisies existantes)
         RECETTES_DEFAULT.forEach(rd => {
           if (!appData.recettes.find(r=>r.product_id===rd.product_id)) {
             appData.recettes.push({...JSON.parse(JSON.stringify(rd)), _source:'estime'});
           }
         });
       }
+      // ── Migration nomenclature familles (v11.1) ─────────
+      _migrateCatalogFamilies();
     } else {
       appData.catalog = DEFAULT_CATALOG;
       appData.dd_clients = JSON.parse(JSON.stringify(DD_REF_DEFAULT));
@@ -4387,7 +5348,6 @@ function loadData() {
       appData.matieres_premieres = JSON.parse(JSON.stringify(MP_DEFAULT));
       appData.recettes = JSON.parse(JSON.stringify(RECETTES_DEFAULT)).map(r=>({...r, _source:'estime'}));
       seedRealEntries();
-      // Déduplication des entrées seed
       appData.entries = appData.entries.map(e => ({...e, items: deduplicateItems(e.items)}));
       saveData();
     }
@@ -4399,8 +5359,51 @@ function loadData() {
   }
   const k = localStorage.getItem(API_KEY_STORAGE);
   if (k) document.getElementById('api-key-input').value = k;
-  // Persister si des recettes estimées ont été injectées à la migration
   saveData();
+}
+
+// ── Migration automatique des anciennes familles → nouvelles ──
+function _migrateCatalogFamilies() {
+  if (!appData.catalog || !appData.catalog.length) return;
+  const FAMILY_MAP = {
+    'Sandwichs & Snacking':         'Sandwichs',
+    'Choux & Pâtisseries':          'Pâtisseries Classiques',
+    'Pains & Viennoiseries salées': 'Viennoiseries',
+    'Quatre-quarts':                'Gâteaux Traditionnels',
+    'Puddings & Gâteaux locaux':    'Gâteaux Traditionnels',
+    'Pains & Baguettes':            'Pains Classiques',
+    'Boissons':                     'Boissons Maison',
+    'Autres':                       'Épicerie & Divers',
+  };
+  const validFamilies = new Set([
+    'Pains Classiques','Pains Spéciaux BèlNati','Viennoiseries',
+    'Feuilletés & Snacking Chaud','Sandwichs','Pâtisseries Classiques',
+    'Galettes Créoles','Gâteaux Traditionnels','Boissons Maison','Épicerie & Divers'
+  ]);
+  const needsMigration = appData.catalog.some(p => !validFamilies.has(p.family));
+  if (!needsMigration) return;
+
+  const defaultById = {};
+  DEFAULT_CATALOG.forEach(p => { defaultById[p.id] = p; });
+
+  let migrated = 0;
+  appData.catalog = appData.catalog.map(p => {
+    if (validFamilies.has(p.family)) return p;
+    // Par ID → DEFAULT_CATALOG
+    if (defaultById[p.id]) {
+      migrated++;
+      return {...p, family: defaultById[p.id].family};
+    }
+    // Par table générique
+    const newFam = FAMILY_MAP[p.family];
+    if (newFam) { migrated++; return {...p, family: newFam}; }
+    return p;
+  });
+
+  if (migrated > 0) {
+    console.log(`✅ Migration familles : ${migrated} produit(s) remappé(s)`);
+    showToast(`✅ Catalogue : ${migrated} produit(s) migré(s) vers la nouvelle nomenclature`);
+  }
 }
 
 // ── Dirty flags pour savoir quoi pousser ────────────────
@@ -5852,6 +6855,7 @@ function showTab(name) {
   if(name==='historique') renderHistorique();
   if(name==='catalogue')  renderCatalogue();
   if(name==='matieres')   { renderMPBesoins(); }
+  if(name==='saisie')     { setTimeout(()=>{ document.getElementById('saisie-search')?.focus(); updateSaisieRecap(); }, 120); }
   setTimeout(updateFAB, 80);
 }
 
@@ -6324,16 +7328,48 @@ function selectSynthFam(fam){_synthFam=fam;if(window._analyseData){const{filtere
 
 
 function renderHistorique() {
+  upgradeSearchInput('hist-search');
   const c = document.getElementById('history-list');
-  if (!appData.entries.length) {
-    c.innerHTML='<div class="empty"><div class="empty-icon">📭</div><p>Aucune saisie enregistrée</p></div>'; return;
+  if (!c) return;
+
+  const q       = (document.getElementById('hist-search')?.value||'').trim();
+  const period  = document.getElementById('hist-period')?.value || 'all';
+  const cutDate = period === 'all' ? null : (() => {
+    const d = new Date(); d.setDate(d.getDate() - parseInt(period));
+    return d.toISOString().split('T')[0];
+  })();
+
+  let entries = [...(appData.entries||[])].sort((a,b) => b.date.localeCompare(a.date));
+
+  // Filtre période
+  if (cutDate) entries = entries.filter(e => e.date >= cutDate);
+
+  // Filtre texte : cherche dans date, noms produits, familles
+  if (q) {
+    entries = entries.filter(e => {
+      const [y,m,d2] = e.date.split('-');
+      const dateStr = `${d2}/${m}/${y} ${e.date}`;
+      const prodTexts = e.items.map(i => {
+        const p = getProd(i.productId) || appData.catalog.find(c=>c.name===(i.name||i.productName));
+        return (p ? p.name+' '+p.family : (i.name||i.productName||''));
+      }).join(' ');
+      return univMatch(q, dateStr, prodTexts, e.source||'');
+    });
   }
+
+  if (!entries.length) {
+    c.innerHTML = q
+      ? `<div class="empty"><div class="empty-icon">🔍</div><p>Aucune saisie pour "<strong>${escHtml(q)}</strong>"</p></div>`
+      : `<div class="empty"><div class="empty-icon">📭</div><p>Aucune saisie enregistrée</p></div>`;
+    return;
+  }
+
   c.innerHTML=`
     <table class="history-table">
       <thead><tr><th>Date</th><th>Articles</th><th>Familles</th><th>Valeur</th><th>Source</th><th></th></tr></thead>
       <tbody>
-        ${appData.entries.map(e=>{
-          const tq = e.items.reduce((s,i)=>s+i.qty,0);
+        ${entries.map(e=>{
+          const tq = e.items.reduce((s,i)=>s+(i.qty||0),0);
           const tv = e.items.reduce((s,i)=>{
             const p = getProd(i.productId) || appData.catalog.find(c=>c.name===(i.name||i.productName)) || null;
             const price = p ? p.price : (i.price||i.prix||0);
@@ -6343,9 +7379,10 @@ function renderHistorique() {
             const p = getProd(i.productId) || appData.catalog.find(c=>c.name===(i.name||i.productName)) || null;
             return p ? p.family : (i.family||i.famille||'?');
           })).size;
-          const[y,m,d]=e.date.split('-');
+          const[y,m,d2]=e.date.split('-');
+          const dateHtml = q ? univHighlight(`${d2}/${m}/${y}`, q) : `${d2}/${m}/${y}`;
           return `<tr>
-            <td><strong>${d}/${m}/${y}</strong></td>
+            <td><strong>${dateHtml}</strong></td>
             <td>${tq} art.</td><td>${fams} fam.</td>
             <td style="color:var(--danger);font-weight:700">${tv.toFixed(2).replace('.',',')} €</td>
             <td style="font-size:0.75rem;color:var(--muted)">${e.source==='ocr'?'📷 OCR':'✏️ Manuel'}</td>
@@ -6359,7 +7396,10 @@ function renderHistorique() {
           </tr>`;
         }).join('')}
       </tbody>
-    </table>`;
+    </table>
+    <div style="font-size:0.75rem;color:var(--muted);margin-top:8px;text-align:right">
+      ${entries.length} saisie${entries.length>1?'s':''} affichée${entries.length>1?'s':''}${q ? ` pour "<strong>${escHtml(q)}</strong>"` : ''}
+    </div>`;
 }
 
 function showDetail(date) {
@@ -6656,10 +7696,11 @@ function exportCataloguePDF() {
 }
 
 function renderCatalogue() {
-  const q = (document.getElementById('cat-search')?.value||'').toLowerCase().trim();
+  upgradeSearchInput('cat-search');
+  const q = (document.getElementById('cat-search')?.value||'').trim();
   let catalog = (appData.catalog||[]).filter(p =>
     (!_catFam || p.family === _catFam) &&
-    (!q || p.name.toLowerCase().includes(q) || p.family.toLowerCase().includes(q))
+    univMatch(q, p.name, p.family)
   );
 
   // Tri : par famille puis par nom
@@ -6675,8 +7716,8 @@ function renderCatalogue() {
   const readOnly = (_currentRole === 'livreur' || _currentRole === 'prestataire');
 
   const makeRow = p => `<tr>
-    <td><strong>${p.name}</strong></td>
-    <td><span class="family-badge">${FAMILY_ICONS[p.family]||'📦'} ${p.family}</span></td>
+    <td><strong>${univHighlight(p.name, q)}</strong></td>
+    <td><span class="family-badge">${FAMILY_ICONS[p.family]||'📦'} ${univHighlight(p.family, q)}</span></td>
     <td><strong>${p.price.toFixed(2)} €</strong></td>
     <td>${readOnly ? '' : `
       <button class="btn btn-sm btn-outline" onclick="editProduct('${p.id}')">✏️</button>
@@ -6722,10 +7763,16 @@ function renderCatalogue() {
     const prods = byFam[fam];
     const icon  = FAMILY_ICONS[fam]||'📦';
     const color = {
-      'Sandwichs & Snacking':'#e65100','Choux & Pâtisseries':'#ad1457',
-      'Pains & Viennoiseries salées':'#6a1b9a','Quatre-quarts':'#1565c0',
-      'Puddings & Gâteaux locaux':'#00695c','Pains & Baguettes':'var(--primary)',
-      'Pains Spéciaux BèlNati':'#2e7d32','Boissons':'#0277bd','Autres':'#546e7a'
+      'Pains Classiques':            '#5d4037',
+      'Pains Spéciaux BèlNati':      '#2e7d32',
+      'Viennoiseries':               '#6a1b9a',
+      'Feuilletés & Snacking Chaud': '#e65100',
+      'Sandwichs':                   '#1565c0',
+      'Pâtisseries Classiques':      '#ad1457',
+      'Galettes Créoles':            '#c62828',
+      'Gâteaux Traditionnels':       '#00695c',
+      'Boissons Maison':             '#0277bd',
+      'Épicerie & Divers':           '#546e7a',
     }[fam]||'var(--primary)';
     return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
       <div style="background:${color};color:white;padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer"
@@ -6951,9 +7998,16 @@ function updateMobileNav() {
         ${LABELS[t]||t}
       </button>`).join('');
   }
-  // Afficher la nav mobile
+  // Afficher la nav mobile uniquement sur écrans mobiles
   const mobileNav = document.getElementById('mobile-nav');
-  if (mobileNav) mobileNav.style.display = 'flex';
+  if (mobileNav) {
+    // Ne pas forcer display:flex sur desktop — la CSS gère déjà display:none / flex selon viewport
+    if (window.innerWidth <= 680) {
+      mobileNav.style.display = 'flex';
+    } else {
+      mobileNav.style.display = ''; // reset inline style, laisse la CSS décider
+    }
+  }
 }
 
 function toggleMobileMore() {
@@ -7306,6 +8360,369 @@ function dashPeriod(period) {
       btn.style.borderColor = active ? '#1a6b3c' : '#ccc';
     });
   }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPER DE RECHERCHE UNIVERSEL
+// ═══════════════════════════════════════════════════════════
+/**
+ * Tokenise la query, teste si tous les tokens sont dans haystack.
+ * @param {string} q   — query utilisateur
+ * @param {...string} fields — textes dans lesquels chercher
+ */
+function univMatch(q, ...fields) {
+  if (!q) return true;
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const haystack = fields.join(' ').toLowerCase();
+  return tokens.every(t => haystack.includes(t));
+}
+
+/**
+ * Surligne tous les tokens dans un texte (retourne HTML).
+ * @param {string} text  — texte brut
+ * @param {string} q     — query utilisateur
+ */
+function univHighlight(text, q) {
+  if (!q || !q.trim()) return escHtml(text);
+  const tokens = q.trim().split(/\s+/).filter(Boolean);
+  let result = escHtml(text);
+  tokens.forEach(t => {
+    const re = new RegExp('('+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi');
+    result = result.replace(re, '<mark class="hl">$1</mark>');
+  });
+  return result;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/**
+ * Attache les comportements standards à un champ de recherche :
+ * - Clear button
+ * - Escape = vider
+ * - Callback onchange
+ */
+function initUnivSearch(inputId, onchange, clearCallback) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const wrap = input.closest('.univ-search-wrap');
+  input.addEventListener('input', () => {
+    if (wrap) wrap.classList.toggle('has-q', !!input.value.trim());
+    onchange();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      input.value = '';
+      if (wrap) wrap.classList.remove('has-q');
+      onchange();
+      if (clearCallback) clearCallback();
+    }
+  });
+  // Clear button click
+  const clrBtn = wrap?.querySelector('.clr-btn');
+  if (clrBtn) {
+    clrBtn.addEventListener('click', () => {
+      input.value = '';
+      wrap.classList.remove('has-q');
+      onchange();
+      if (clearCallback) clearCallback();
+      input.focus();
+    });
+  }
+}
+
+// ─── Keyboard navigation pour listes de résultats ──────────
+function univKeyNav(e, listSelector, focusFirst=false) {
+  const rows = [...document.querySelectorAll(listSelector)];
+  if (!rows.length) return;
+  const cur = document.activeElement;
+  const idx = rows.indexOf(cur);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    (rows[idx+1] || rows[0])?.focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    (rows[idx-1] || rows[rows.length-1])?.focus();
+  }
+}
+
+// ─── Wrapper HTML pour champ de recherche unifié ───────────
+function univSearchHtml(id, placeholder, extraStyle='') {
+  return `<div class="univ-search-wrap" style="${extraStyle}">
+    <span style="font-size:1rem;opacity:0.5">🔍</span>
+    <input type="text" id="${id}" placeholder="${placeholder}" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="clr-btn" title="Effacer">✕</button>
+  </div>`;
+}
+
+// ─── Upgrade des anciens inputs simples au style unifié ────
+function upgradeSearchInput(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input || input.dataset.upgraded) return;
+  // Ne pas re-wrapper si déjà dans un univ-search-wrap
+  if (input.closest('.univ-search-wrap')) { input.dataset.upgraded = '1'; return; }
+  input.dataset.upgraded = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'univ-search-wrap';
+  wrap.style.cssText = input.style.cssText || '';
+  input.style.cssText = '';
+  input.parentNode.insertBefore(wrap, input);
+  const icon = document.createElement('span');
+  icon.textContent = '🔍'; icon.style.cssText = 'font-size:1rem;opacity:0.5';
+  const clr = document.createElement('button');
+  clr.className = 'clr-btn'; clr.title = 'Effacer'; clr.textContent = '✕';
+  wrap.appendChild(icon);
+  wrap.appendChild(input);
+  wrap.appendChild(clr);
+  clr.addEventListener('click', () => {
+    input.value = ''; wrap.classList.remove('has-q');
+    input.dispatchEvent(new Event('input'));
+    input.focus();
+  });
+  input.addEventListener('input', () => wrap.classList.toggle('has-q', !!input.value.trim()));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { input.value = ''; wrap.classList.remove('has-q'); input.dispatchEvent(new Event('input')); }
+  });
+}
+
+// ─── Appel au démarrage de chaque onglet ───────────────────
+function initAllSearchUpgrades() {
+  ['cat-search','recette-search','hist-search'].forEach(upgradeSearchInput);
+}
+
+// ─── Recherche Historique ───────────────────────────────────
+// (injectée dans l'HTML de l'onglet au premier renderHistorique)
+let _saisieSearchIdx = -1; // index du résultat sélectionné au clavier
+
+function filterSaisie() {
+  const q = (document.getElementById('saisie-search')?.value || '').trim().toLowerCase();
+  const resultsEl = document.getElementById('saisie-search-results');
+  const clearBtn  = document.getElementById('saisie-search-clear');
+  const wrap      = document.getElementById('saisie-search-wrap');
+
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+  if (wrap)     wrap.style.borderColor = q ? '#1a6b3c' : '#e0e0e0';
+
+  _saisieSearchIdx = -1;
+
+  if (!q) {
+    if (resultsEl) resultsEl.style.display = 'none';
+    // Restaurer affichage familles
+    document.getElementById('manual-families').style.display = '';
+    updateSaisieRecap();
+    return;
+  }
+
+  // Masquer les familles pendant la recherche
+  document.getElementById('manual-families').style.display = 'none';
+
+  // Tokens : tous les mots doivent matcher
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const matches = appData.catalog.filter(p => {
+    const haystack = (p.name + ' ' + (p.family||'')).toLowerCase();
+    return tokens.every(t => haystack.includes(t));
+  }).slice(0, 20);
+
+  if (!resultsEl) return;
+
+  if (!matches.length) {
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `<div style="padding:10px 4px;font-size:0.85rem;color:#999;font-style:italic">Aucun produit trouvé pour "<strong>${q}</strong>"</div>`;
+    return;
+  }
+
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = matches.map((p, i) => {
+    const qtyVal = document.getElementById('qty_'+p.id)?.value || '0';
+    const hasQty = parseInt(qtyVal) > 0;
+    const destRec = _quickDestMap[p.id]==='recyclage';
+    const destPer = _quickDestMap[p.id]==='perte';
+    const famIcon = FAMILY_ICONS[p.family] || '📦';
+    return `<div class="saisie-result-row${hasQty?' has-qty':''}" id="sres_${p.id}" data-idx="${i}"
+      style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px;
+             background:${hasQty?'#e8f5e9':'white'};margin-bottom:4px;
+             border:1.5px solid ${hasQty?'#81c784':'#f0f0f0'};transition:background .15s">
+      <span style="font-size:0.9rem;min-width:22px;text-align:center">${famIcon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.9rem;font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${highlightMatch(p.name, tokens)}
+        </div>
+        <div style="font-size:0.7rem;color:#999">${p.family} · ${p.price.toFixed(2)} €</div>
+      </div>
+      <input class="qty-input saisie-res-qty" type="number" min="0"
+        id="sqty_${p.id}"
+        value="${qtyVal}"
+        data-pid="${p.id}"
+        placeholder="0"
+        onchange="setSaisieQty('${p.id}', this.value)"
+        oninput="setSaisieQty('${p.id}', this.value)"
+        onkeydown="saisieQtyKey(event, '${p.id}', ${i}, ${matches.length})"
+        style="width:64px;font-size:1rem;font-weight:700;text-align:center;
+               border:1.5px solid ${hasQty?'#4caf50':'#ddd'};border-radius:8px;
+               padding:6px 4px;background:${hasQty?'#f1f8e9':'white'}">
+      <div style="display:flex;gap:4px;opacity:${hasQty?'1':'0.3'};transition:opacity .15s" id="sdtrio_${p.id}">
+        <button class="dest-trio-btn${destRec?' active-rec':''}" id="sdbtn-rec-${p.id}"
+          onclick="setSaisieDestAndSync('${p.id}','recyclage',this)"
+          style="font-size:0.75rem;padding:5px 7px">♻️</button>
+        <button class="dest-trio-btn${destPer?' active-per':''}" id="sdbtn-per-${p.id}"
+          onclick="setSaisieDestAndSync('${p.id}','perte',this)"
+          style="font-size:0.75rem;padding:5px 7px">💸</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Focus auto sur le premier input si 1 seul résultat
+  if (matches.length === 1) {
+    setTimeout(() => document.getElementById('sqty_'+matches[0].id)?.focus(), 50);
+  }
+}
+
+function highlightMatch(name, tokens) {
+  let result = name;
+  tokens.forEach(t => {
+    const re = new RegExp('('+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi');
+    result = result.replace(re, '<mark style="background:#fff176;border-radius:3px;padding:0 2px">$1</mark>');
+  });
+  return result;
+}
+
+function setSaisieQty(pid, val) {
+  const qty = Math.max(0, parseInt(val)||0);
+  // Mettre à jour l'input du formulaire principal
+  const mainInput = document.getElementById('qty_'+pid);
+  if (mainInput) mainInput.value = qty;
+  // Mettre à jour l'input de recherche
+  const searchInput = document.getElementById('sqty_'+pid);
+  if (searchInput) {
+    searchInput.style.borderColor = qty>0 ? '#4caf50' : '#ddd';
+    searchInput.style.background  = qty>0 ? '#f1f8e9' : 'white';
+  }
+  const row = document.getElementById('sres_'+pid);
+  if (row) {
+    row.style.background   = qty>0 ? '#e8f5e9' : 'white';
+    row.style.borderColor  = qty>0 ? '#81c784' : '#f0f0f0';
+  }
+  const trio = document.getElementById('sdtrio_'+pid);
+  if (trio) trio.style.opacity = qty>0 ? '1' : '0.3';
+  // Sync destinations
+  refreshDestRow(pid);
+  updateTotal();
+  updateSaisieRecap();
+}
+
+function setSaisieDestAndSync(pid, dest, btn) {
+  // Sync avec le formulaire principal
+  setQuickDest(pid, dest, null);
+  // Mettre à jour les boutons dans les résultats de recherche
+  const recBtn = document.getElementById('sdbtn-rec-'+pid);
+  const perBtn = document.getElementById('sdbtn-per-'+pid);
+  if (recBtn) recBtn.classList.toggle('active-rec', dest==='recyclage');
+  if (perBtn) perBtn.classList.toggle('active-per', dest==='perte');
+  // Aussi sync les boutons du formulaire principal
+  document.getElementById('dbtn-rec-'+pid)?.classList.toggle('active-rec', dest==='recyclage');
+  document.getElementById('dbtn-per-'+pid)?.classList.toggle('active-per', dest==='perte');
+  updateDestRecap();
+}
+
+function saisieSearchKey(e) {
+  const results = document.querySelectorAll('.saisie-result-row');
+  if (!results.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _saisieSearchIdx = Math.min(_saisieSearchIdx+1, results.length-1);
+    const pid = results[_saisieSearchIdx]?.id?.replace('sres_','');
+    if (pid) document.getElementById('sqty_'+pid)?.focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _saisieSearchIdx = Math.max(_saisieSearchIdx-1, 0);
+    const pid = results[_saisieSearchIdx]?.id?.replace('sres_','');
+    if (pid) document.getElementById('sqty_'+pid)?.focus();
+  } else if (e.key === 'Escape') {
+    clearSaisieSearch();
+  }
+}
+
+function saisieQtyKey(e, pid, idx, total) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    setSaisieQty(pid, e.target.value);
+    // Passer au produit suivant dans les résultats
+    const nextIdx = idx + 1;
+    const results = document.querySelectorAll('.saisie-result-row');
+    if (nextIdx < results.length) {
+      const nextPid = results[nextIdx]?.id?.replace('sres_','');
+      if (nextPid) { document.getElementById('sqty_'+nextPid)?.focus(); document.getElementById('sqty_'+nextPid)?.select(); }
+    } else {
+      // Retour au champ de recherche
+      document.getElementById('saisie-search')?.focus();
+      document.getElementById('saisie-search')?.select();
+    }
+  } else if (e.key === 'Escape') {
+    document.getElementById('saisie-search')?.focus();
+  } else if (e.key === 'r' || e.key === 'R') {
+    // Raccourci: R = recyclage
+    const qty = parseInt(document.getElementById('sqty_'+pid)?.value||0);
+    if (!qty) return;
+    e.preventDefault();
+    setSaisieDestAndSync(pid, 'recyclage', null);
+  } else if (e.key === 'p' || e.key === 'P') {
+    // Raccourci: P = perte
+    const qty = parseInt(document.getElementById('sqty_'+pid)?.value||0);
+    if (!qty) return;
+    e.preventDefault();
+    setSaisieDestAndSync(pid, 'perte', null);
+  }
+}
+
+function clearSaisieSearch() {
+  const input = document.getElementById('saisie-search');
+  if (input) { input.value = ''; input.focus(); }
+  document.getElementById('saisie-search-results').style.display = 'none';
+  document.getElementById('saisie-search-clear').style.display = 'none';
+  document.getElementById('saisie-search-wrap').style.borderColor = '#e0e0e0';
+  document.getElementById('manual-families').style.display = '';
+  updateSaisieRecap();
+}
+
+function updateSaisieRecap() {
+  const recapWrap = document.getElementById('saisie-saisis-recap');
+  const recapList = document.getElementById('saisie-saisis-list');
+  if (!recapList || !recapWrap) return;
+  // Chercher si la recherche est active
+  const q = document.getElementById('saisie-search')?.value?.trim();
+  const saisis = appData.catalog.filter(p => {
+    const qty = parseInt(document.getElementById('qty_'+p.id)?.value||0);
+    return qty > 0;
+  });
+  if (!saisis.length) { recapWrap.style.display = 'none'; return; }
+  // N'afficher le récap que si on n'est pas en mode recherche OU si des produits sont saisis
+  recapWrap.style.display = 'block';
+  recapList.innerHTML = saisis.map(p => {
+    const qty = parseInt(document.getElementById('qty_'+p.id)?.value||0);
+    const dest = _quickDestMap[p.id];
+    const destIcon = dest==='recyclage' ? '♻️' : dest==='perte' ? '💸' : '⚠️';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;background:#f9fbe7;border:1px solid #e6ee9c;margin-bottom:3px">
+      <span style="font-size:0.75rem;min-width:18px;text-align:center">${FAMILY_ICONS[p.family]||'📦'}</span>
+      <span style="flex:1;font-size:0.82rem;font-weight:600;color:#1a1a1a">${p.name}</span>
+      <span style="font-size:0.85rem;font-weight:700;color:#1a6b3c">${qty}</span>
+      <span style="font-size:0.75rem">${destIcon}</span>
+      <button onclick="resetSaisieProd('${p.id}')"
+        style="background:none;border:none;cursor:pointer;color:#e57373;font-size:0.85rem;padding:0 2px">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function resetSaisieProd(pid) {
+  const mainInput = document.getElementById('qty_'+pid);
+  if (mainInput) mainInput.value = 0;
+  delete _quickDestMap[pid];
+  document.getElementById('dbtn-rec-'+pid)?.classList.remove('active-rec');
+  document.getElementById('dbtn-per-'+pid)?.classList.remove('active-per');
+  refreshDestRow(pid);
+  filterSaisie(); // re-render résultats si actif
+  updateTotal();
+  updateSaisieRecap();
 }
 
 function restoreDefaultCatalog() {
@@ -7922,16 +9339,16 @@ async function supaPullEntries() {
 // ================================================================
 function showProdTab(name, restoreMemory) {
   const TABS = [
-    { id:'objectifs',   btnId:'stab-objectifs',   color:'var(--primary)' },
-    { id:'particuliers',btnId:'stab-particuliers', color:'#e65100' },
-    { id:'realise',     btnId:'stab-realise',      color:'var(--primary)' },
+    { id:'objectifs',   btnId:'stab-objectifs'   },
+    { id:'particuliers',btnId:'stab-particuliers' },
+    { id:'realise',     btnId:'stab-realise'      },
   ];
   TABS.forEach(t => {
     const sub = document.getElementById('sub-' + t.id);
     const btn = document.getElementById(t.btnId);
     const active = (t.id === name) || (t.id==='realise' && name==='recu');
     if (sub) sub.style.display = active ? 'block' : 'none';
-    if (btn) { btn.style.background = active ? t.color : 'transparent'; btn.style.color = active ? '#fff' : 'var(--text)'; }
+    if (btn) btn.classList.toggle('active', active);
   });
   navSave({ prodTab: name });
   if (name === 'objectifs')    { renderObjWeek(); renderObjWeekSummary(); initObjForm(); }
@@ -7939,7 +9356,6 @@ function showProdTab(name, restoreMemory) {
     const bonDate = document.getElementById('bon-date');
     if (bonDate && !bonDate.value) bonDate.value = new Date().toISOString().split('T')[0];
     if (!_bonItems.length) renderBonItems();
-    // Restaurer le sous-onglet Particuliers mémorisé
     if (restoreMemory) {
       showPartSub(navGet('partSub', 'nouveau'));
     } else {
@@ -7959,10 +9375,7 @@ function showPartSub(sub) {
     const el  = document.getElementById('part-sub-' + s);
     const btn = document.getElementById('part-stab-' + s);
     if (el)  el.style.display  = s === sub ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = s === sub ? '#e65100' : 'transparent';
-      btn.style.color      = s === sub ? '#fff'    : 'var(--text)';
-    }
+    if (btn) btn.classList.toggle('active', s === sub);
   });
   navSave({ partSub: sub });
   if (sub === 'liste') {
@@ -7988,23 +9401,70 @@ let _bonEditId = null;
 let _bonFiltre = 'tous';
 
 function filterBonCatalog() {
-  const q    = (document.getElementById('bon-cat-search')?.value||'').toLowerCase().trim();
+  upgradeSearchInput('bon-cat-search');
+  const q    = (document.getElementById('bon-cat-search')?.value||'').trim();
   const drop = document.getElementById('bon-cat-drop');
   if (!drop) return;
   if (!q) { drop.style.display='none'; return; }
-  const matches = (appData.catalog||[]).filter(p=>p.name.toLowerCase().includes(q)||p.family.toLowerCase().includes(q)).slice(0,15);
-  if (!matches.length) { drop.innerHTML=`<div style="padding:8px 12px;font-size:0.82rem;color:var(--muted)">Aucun résultat</div>`; drop.style.display='block'; return; }
+
+  const matches = (appData.catalog||[]).filter(p => univMatch(q, p.name, p.family)).slice(0,20);
+
+  if (!matches.length) {
+    drop.innerHTML=`<div style="padding:10px 14px;font-size:0.82rem;color:var(--muted);font-style:italic">Aucun résultat pour "<strong>${escHtml(q)}</strong>"</div>`;
+    drop.style.display='block'; return;
+  }
+
   const byFam={};
-  matches.forEach(p=>{if(!byFam[p.family])byFam[p.family]=[];byFam[p.family].push(p);});
+  matches.forEach(p=>{ if(!byFam[p.family]) byFam[p.family]=[]; byFam[p.family].push(p); });
+
   let html='';
   Object.entries(byFam).forEach(([fam,prods])=>{
-    html+=`<div style="padding:4px 10px;font-size:0.7rem;font-weight:700;color:var(--primary);background:rgba(26,107,60,0.06)">${fam}</div>`;
-    prods.forEach(p=>{
-      html+=`<div onmousedown="event.preventDefault();selectBonCatalogItem('${p.id}','${p.name.replace(/'/g,"\\\'")}')"
-        style="padding:7px 14px;font-size:0.85rem;cursor:pointer" onmouseover="this.style.background='rgba(26,107,60,0.08)'" onmouseout="this.style.background=''">${p.name}</div>`;
+    html+=`<div style="padding:5px 12px 2px;font-size:0.69rem;font-weight:800;color:var(--primary);background:rgba(26,107,60,0.05);text-transform:uppercase;letter-spacing:.4px">
+      ${FAMILY_ICONS[fam]||'📦'} ${escHtml(fam)}</div>`;
+    prods.forEach((p,i)=>{
+      html+=`<div tabindex="0" class="bon-drop-item" data-pid="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}"
+        onmousedown="event.preventDefault();selectBonCatalogItem('${p.id}','${p.name.replace(/'/g,"\\\'")}')"
+        onkeydown="bonDropKey(event,'${p.id}','${p.name.replace(/'/g,"\\\'")}')"
+        style="display:flex;align-items:center;padding:7px 14px;font-size:0.85rem;cursor:pointer;outline:none;gap:8px"
+        onmouseover="this.style.background='rgba(26,107,60,0.08)'" onmouseout="this.style.background=''"
+        onfocus="this.style.background='rgba(26,107,60,0.10)'" onblur="this.style.background=''">
+        <span style="flex:1">${univHighlight(p.name, q)}</span>
+        <span style="font-size:0.75rem;color:#aaa;flex-shrink:0">${p.price.toFixed(2)} €</span>
+      </div>`;
     });
   });
+
   drop.innerHTML=html; drop.style.display='block';
+
+  // Keyboard navigation depuis le champ de recherche
+  const input = document.getElementById('bon-cat-search');
+  input.onkeydown = e => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      drop.querySelector('.bon-drop-item')?.focus();
+    } else if (e.key === 'Escape') {
+      drop.style.display='none';
+      input.value='';
+    }
+  };
+}
+
+function bonDropKey(e, pid, name) {
+  const drop = document.getElementById('bon-cat-drop');
+  const items = [...drop.querySelectorAll('.bon-drop-item')];
+  const idx = items.indexOf(e.currentTarget);
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[idx+1]?.focus(); }
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (idx === 0) document.getElementById('bon-cat-search')?.focus();
+    else items[idx-1]?.focus();
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    selectBonCatalogItem(pid, name);
+  } else if (e.key === 'Escape') {
+    drop.style.display='none';
+    document.getElementById('bon-cat-search')?.focus();
+  }
 }
 
 function selectBonCatalogItem(prodId, prodName) {
@@ -8532,10 +9992,7 @@ function showDDSub(sub) {
     const el  = document.getElementById('dd-sub-' + s);
     const btn = document.getElementById('dd-stab-' + s);
     if (el)  el.style.display  = s === sub ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = s === sub ? '#1565c0' : 'transparent';
-      btn.style.color      = s === sub ? '#fff'    : 'var(--text)';
-    }
+    if (btn) btn.classList.toggle('active', s === sub);
   });
   navSave({ ddSub: sub });
   if (sub === 'commandes') renderDDGrid();
@@ -8558,10 +10015,7 @@ function showPrestSub(sub) {
     const el  = document.getElementById('prest-sub-' + s);
     const btn = document.getElementById('prest-stab-' + s);
     if (el)  el.style.display  = s === sub ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = s === sub ? '#6a1b9a' : 'transparent';
-      btn.style.color      = s === sub ? '#fff'    : 'var(--text)';
-    }
+    if (btn) btn.classList.toggle('active', s === sub);
   });
   navSave({ prestSub: sub });
   if (sub === 'commandes') renderPrestGrid();
@@ -8689,7 +10143,7 @@ function renderObjWeekGrid() {
         return `<td style="padding:4px 6px;text-align:center;${isToday?'background:rgba(26,107,60,0.05)':''}">
           <input type="number" min="0" value="${val}"
             id="obj_${d}_${p.id}"
-            onchange="updateWeekTotal('${p.id}')"
+            onchange="updateWeekTotal('${p.id}');markUnsaved('sbn')"
             style="width:64px;text-align:center;padding:4px;border:1px solid var(--border);
                    border-radius:6px;font-size:0.82rem;${val>0?'background:#e8f5e9;font-weight:700':''}">
         </td>`;
@@ -8754,6 +10208,7 @@ function saveObjectifsWeek() {
   });
   saveData();
   renderObjWeekSummary();
+  markSaved('sbn');
   showToast(`✅ Objectifs enregistrés pour ${saved} jour(s)`);
 }
 
@@ -9359,11 +10814,7 @@ function showCircuit(circuit, restoreMemory) {
     const div = document.getElementById('circuit-' + c);
     const btn = document.getElementById('stab-' + c);
     if (div) div.style.display = c === circuit ? 'block' : 'none';
-    if (btn) {
-      const colors = {sbn:'var(--primary)',dd:'#1565c0',prest:'#6a1b9a',reception:'#2e7d32',bonprod:'#37474f'};
-      btn.style.background = c === circuit ? (colors[c]||'var(--primary)') : 'transparent';
-      btn.style.color      = c === circuit ? '#fff' : 'var(--text)';
-    }
+    if (btn) btn.classList.toggle('active', c === circuit);
   });
   // Mémoriser le circuit actif
   navSave({ circuit });
@@ -9402,15 +10853,14 @@ function showCircuit(circuit, restoreMemory) {
     const el = document.getElementById('synthese-date');
     if (el && !el.value) el.value = today;
     if (restoreMemory) {
-      const synthView = navGet('synthView',
-        (_currentRole==='chef_prod'||_currentRole==='manager'||_currentRole==='direction') ? 'validation' : 'jour');
-      showSynthView(synthView);
+      const synthMode = navGet('synthMode',
+        (['chef_prod','manager','direction'].includes(_currentRole)) ? 'validation' : 'bonprod');
+      showSynthMode(synthMode);
     } else {
-      if (_currentRole === 'chef_prod' || _currentRole === 'manager' || _currentRole === 'direction') {
-        showSynthView('validation');
+      if (['chef_prod','manager','direction'].includes(_currentRole)) {
+        showSynthMode('validation');
       } else {
-        showSynthView('jour');
-        renderSynthese();
+        showSynthMode('bonprod');
       }
     }
   }
@@ -9774,7 +11224,7 @@ function renderDDGridByClient(dates, today, container) {
         return `<td style="text-align:center;padding:3px 4px;${d===today?'background:rgba(21,101,192,0.07)':''}">
           <input type="number" min="0" value="${savedVal}"
             id="dd_${client.id}_${prod.id}_${d}"
-            onchange="updateDDRowTotal('${client.id}','${prod.id}',ddWeekOffset)"
+            onchange="updateDDRowTotal('${client.id}','${prod.id}',ddWeekOffset);markUnsaved('dd')"
             style="width:54px;text-align:center;padding:4px 2px;border:1px solid ${refQty>0?'#90caf9':'var(--border)'};border-radius:5px;font-size:0.82rem;font-weight:${refQty>0?'700':'400'};background:${savedVal>0?'rgba(21,101,192,0.05)':'white'}">
         </td>`;
       }).join('');
@@ -10033,6 +11483,7 @@ function saveDDWeek() {
     appData.commandes_dd.push({ semaine:sem, clientId:client.id, clientName:client.name, items, savedAt:new Date().toISOString() });
   });
   saveData();
+  markSaved('dd');
   showToast('✅ Commandes DD sauvegardées');
 }
 
@@ -10118,7 +11569,7 @@ function renderPrestGrid() {
           rowTot += saved;
           return `<td style="text-align:center;padding:3px 4px;${d===today?'background:rgba(106,27,154,0.05)':''}">
             <input type="number" min="0" value="${saved}" id="${key}"
-              onchange="updatePrestTotals('${prod.id}',prestWeekOffset)"
+              onchange="updatePrestTotals('${prod.id}',prestWeekOffset);markUnsaved('prest')"
               style="width:50px;text-align:center;padding:4px 2px;border:1px solid #ce93d8;border-radius:5px;font-size:0.82rem;font-weight:700;background:${saved>0?'rgba(106,27,154,0.04)':'white'}">
           </td>`;
         }).join('');
@@ -10152,7 +11603,7 @@ function renderPrestGrid() {
           rowTot += saved;
           return `<td style="text-align:center;padding:3px 4px">
             <input type="number" min="0" value="${saved}" id="prest_${client.id}_${prod.id}_${d}"
-              onchange="updatePrestTotals('${prod.id}',prestWeekOffset)"
+              onchange="updatePrestTotals('${prod.id}',prestWeekOffset);markUnsaved('prest')"
               style="width:50px;text-align:center;padding:4px 2px;border:1px solid #ce93d8;border-radius:5px;font-size:0.82rem;font-weight:700">
           </td>`;
         }).join('');
@@ -10289,6 +11740,7 @@ function savePrestWeek() {
     appData.commandes_prest.push({ semaine:sem, clientId:client.id, clientName:client.name, items, savedAt:new Date().toISOString() });
   });
   saveData();
+  markSaved('prest');
   showToast('✅ Commandes Prestataire sauvegardées');
 }
 
@@ -11943,46 +13395,94 @@ function buildSyntheseTable(items, showCircuits=true) {
 let _synthWeekOffset  = 0;
 let _synthMonthOffset = 0;
 
-function showSynthView(view) {
-  const ALL_VIEWS = ['validation','bilan','jour','circuit','semaine','mois'];
-  ALL_VIEWS.forEach(v => {
-    const el = document.getElementById(`synth-view-${v}`);
-    if (el) el.style.display = v===view ? 'block' : 'none';
+// ── BONPROD NIVEAU 1 : Mode (Validation / Bon de Production) ──
+function showSynthMode(mode) {
+  const isValidation = (mode === 'validation');
+  const isChef = (_currentRole === 'chef_prod');
+  document.getElementById('synth-view-validation').style.display = isValidation ? 'block' : 'none';
+  document.getElementById('synth-view-bonprod').style.display    = isValidation ? 'none' : 'block';
+
+  // Highlight tabs chef
+  const tc1 = document.getElementById('synth-tab-validation');
+  const tc2 = document.getElementById('synth-tab-bonprod');
+  if (tc1) tc1.classList.toggle('active', isValidation);
+  if (tc2) tc2.classList.toggle('active', !isValidation);
+  // Highlight tabs others
+  const to1 = document.getElementById('synth-tab-validation-m');
+  const to2 = document.getElementById('synth-tab-bonprod-m');
+  if (to1) to1.classList.toggle('active', isValidation);
+  if (to2) to2.classList.toggle('active', !isValidation);
+
+  navSave({ synthMode: mode });
+  if (isValidation) renderValidationChef();
+  else showBPHorizon(navGet('bpHorizon') || 'jour');
+  setTimeout(updateFAB, 80);
+}
+
+// ── BONPROD NIVEAU 2 : Horizon temporel (Jour / Semaine / Mois) ──
+function showBPHorizon(horizon) {
+  ['jour','semaine','mois'].forEach(h => {
+    const v = document.getElementById(`bp-view-${h}`);
+    const b = document.getElementById(`bp-tab-${h}`);
+    if (v) v.style.display = h === horizon ? 'block' : 'none';
+    if (b) b.classList.toggle('active', h === horizon);
   });
-  // Highlight boutons chef
-  ['validation','bilan'].forEach(v => {
-    const btn = document.getElementById(`synth-tab-${v}`);
-    if (btn) { btn.style.background=v===view?'#1b5e20':'transparent'; btn.style.color=v===view?'#fff':'var(--text)'; }
-  });
-  ['jour','circuit','semaine','mois'].forEach(v => {
-    const btn = document.getElementById(`synth-tab-${v}`);
-    if (btn) { btn.style.background=v===view?'var(--primary)':'transparent'; btn.style.color=v===view?'#fff':'var(--text)'; }
-  });
-  // Bouton Validation dans la barre others
-  const btnValM = document.getElementById('synth-tab-validation-m');
-  if (btnValM) { btnValM.style.background=view==='validation'?'#1565c0':'transparent'; btnValM.style.color=view==='validation'?'#fff':'var(--text)'; }
+  navSave({ bpHorizon: horizon });
+
   const canValidate = ['chef_prod','manager','direction'].includes(_currentRole);
-  const toolbar     = document.getElementById('chef-val-toolbar');
+  const toolbar = document.getElementById('chef-val-toolbar');
   const toolbarJour = document.getElementById('chef-val-jour-toolbar');
-  if (toolbar)     toolbar.style.display     = (canValidate && view==='semaine') ? 'block':'none';
-  if (toolbarJour) toolbarJour.style.display = (canValidate && view==='jour')    ? 'block':'none';
-  // Mémoriser la vue
-  navSave({ synthView: view });
-  if (view==='validation') { renderValidationChef(); }
-  if (view==='bilan')      { showBilanSub('jour'); }
-  if (view==='jour') {
+  if (toolbar) toolbar.style.display = (canValidate && horizon === 'semaine') ? 'block' : 'none';
+  if (toolbarJour) toolbarJour.style.display = (canValidate && horizon === 'jour') ? 'block' : 'none';
+
+  if (horizon === 'jour') {
     const el = document.getElementById('synthese-date');
     if (el && !el.value) el.value = new Date().toISOString().split('T')[0];
-    renderSynthese();
+    renderBPJour();
   }
-  if (view==='circuit') {
-    const el = document.getElementById('synthese-circuit-date');
-    if (el && !el.value) el.value = new Date().toISOString().split('T')[0];
+  if (horizon === 'semaine') renderSyntheseWeek();
+  if (horizon === 'mois') renderSyntheseMois();
+  setTimeout(updateFAB, 80);
+}
+
+// ── BONPROD NIVEAU 3 : Présentation Jour (Par produit / Par client) ──
+let _bpPres = 'produit';
+function showBPPres(pres) {
+  _bpPres = pres;
+  document.getElementById('bp-jour-produit').style.display = pres === 'produit' ? 'block' : 'none';
+  document.getElementById('bp-jour-client').style.display  = pres === 'client'  ? 'block' : 'none';
+  document.getElementById('bp-pres-produit').classList.toggle('active', pres === 'produit');
+  document.getElementById('bp-pres-client').classList.toggle('active', pres === 'client');
+  if (pres === 'produit') renderSynthese();
+  if (pres === 'client') {
+    const date = document.getElementById('synthese-date')?.value;
+    const dateC = document.getElementById('synthese-circuit-date');
+    if (dateC && date) dateC.value = date;
     renderSyntheseParCircuit();
   }
-  if (view==='semaine') renderSyntheseWeek();
-  if (view==='mois')    renderSyntheseMois();
-  setTimeout(updateFAB, 80);
+}
+
+// ── Point d'entrée unique Jour ──
+function renderBPJour() {
+  const date = document.getElementById('synthese-date')?.value;
+  const dateC = document.getElementById('synthese-circuit-date');
+  if (dateC && date) dateC.value = date;
+  if (_bpPres === 'produit') renderSynthese();
+  else renderSyntheseParCircuit();
+}
+
+// ── COMPAT : showSynthView conservé pour les appels internes restants ──
+function showSynthView(view) {
+  // Mapping ancien → nouveau
+  if (view === 'validation') { showSynthMode('validation'); return; }
+  if (view === 'bilan') { showSynthMode('bonprod'); showBPHorizon('jour'); return; }
+  if (view === 'jour' || view === 'circuit' || view === 'semaine' || view === 'mois') {
+    showSynthMode('bonprod');
+    const h = (view === 'circuit') ? 'jour' : view;
+    showBPHorizon(h);
+    if (view === 'circuit') showBPPres('client');
+    return;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -12276,39 +13776,8 @@ function validerCircuit(circ) {
 }
 
 function showBilanSub(sub) {
-  ['jour','semaine','mois'].forEach(s => {
-    const btn = document.getElementById(`bilan-tab-${s}`);
-    if (btn) { btn.style.background=s===sub?'var(--primary)':'transparent'; btn.style.color=s===sub?'#fff':'var(--text)'; }
-  });
-  const inner = document.getElementById('bilan-inner-content');
-  if (!inner) return;
-  if (sub==='jour') {
-    const today = new Date().toISOString().split('T')[0];
-    inner.innerHTML=`<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <input type="date" id="bilan-date-jour" value="${today}" onchange="renderBilanJour()"
-        style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem">
-      <button onclick="renderBilanJour()" style="padding:7px 14px;border-radius:20px;background:var(--primary);color:white;border:none;cursor:pointer;font-weight:700">🔄</button>
-    </div><div id="bilan-jour-content"></div>`;
-    renderBilanJour();
-  }
-  if (sub==='semaine') {
-    inner.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <button onclick="bilanWeekNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀</button>
-      <strong id="bilan-week-label" style="font-size:0.88rem;color:var(--primary)"></strong>
-      <button onclick="bilanWeekNav(0)" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer;font-size:0.82rem">Courante</button>
-      <button onclick="bilanWeekNav(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">▶</button>
-    </div><div id="bilan-semaine-content"></div>`;
-    renderBilanSemaine();
-  }
-  if (sub==='mois') {
-    inner.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      <button onclick="bilanMoisNav(-1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">◀</button>
-      <strong id="bilan-month-label" style="font-size:0.88rem;color:var(--primary)"></strong>
-      <button onclick="bilanMoisNav(0)" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer;font-size:0.82rem">Courant</button>
-      <button onclick="bilanMoisNav(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:white;cursor:pointer">▶</button>
-    </div><div id="bilan-mois-inner"></div>`;
-    renderBilanMois();
-  }
+  // Redirige vers le nouveau système hiérarchique
+  showBPHorizon(sub);
 }
 
 let _bilanWeekOffset = 0;
@@ -13583,7 +15052,7 @@ function addClientProductRow(prod = null, isDD = (_clientModalCircuit === 'dd'))
     <div style="flex:1;min-width:200px;position:relative">
       <label style="font-size:0.75rem">Produit <span style="color:var(--muted);font-weight:400">(tapez pour filtrer)</span></label>
       <input type="text" id="cpsearch_${rowId}"
-        placeholder="🔍 Rechercher dans le catalogue…"
+        placeholder="Rechercher dans le catalogue…"
         value="${prodName}"
         autocomplete="off"
         oninput="filterCatalogSearch(${rowId})"
