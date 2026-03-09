@@ -4908,98 +4908,226 @@ function renderHome() {
   // ── DASHBOARD KPI Direction uniquement ──────────────────
   let dirDashboard = '';
   if (role === 'direction') {
-    // Recalcul local des variables hors scope
+
+    // ── Utilitaires dates ──────────────────────────────────
     const semValKey2 = `semaine_chef_0`;
     const semaineOk = (appData.chef_validations||[]).some(v =>
       v.type==='semaine' && v.weekKey===semValKey2 && v.statut==='ok');
-    const getWeekRange = (offsetWeeks=0) => {
+
+    const getWeekDays = (offsetWeeks=0) => {
       const d = new Date(today);
-      const day = d.getDay() || 7;
-      d.setDate(d.getDate() - day + 1 + offsetWeeks*7);
-      const start = d.toISOString().split('T')[0];
-      d.setDate(d.getDate() + 6);
-      const end = d.toISOString().split('T')[0];
-      return { start, end };
+      const dow = d.getDay() || 7;
+      d.setDate(d.getDate() - dow + 1 + offsetWeeks*7);
+      return Array.from({length:7}, (_,i) => {
+        const x = new Date(d); x.setDate(d.getDate()+i);
+        return x.toISOString().split('T')[0];
+      });
     };
-    const thisWeek = getWeekRange(0);
-    const lastWeek = getWeekRange(-1);
-    const inRange = (date, r) => date >= r.start && date <= r.end;
+    const getMonthDays = (offsetMonths=0) => {
+      const d = new Date(today.getFullYear(), today.getMonth()+offsetMonths, 1);
+      const days = [];
+      while(d.getMonth() === (new Date(today.getFullYear(), today.getMonth()+offsetMonths, 1)).getMonth()) {
+        days.push(d.toISOString().split('T')[0]);
+        d.setDate(d.getDate()+1);
+      }
+      return days;
+    };
+    const thisWeekDays  = getWeekDays(0);
+    const lastWeekDays  = getWeekDays(-1);
+    const thisMonthDays = getMonthDays(0);
+    const lastMonthDays = getMonthDays(-1);
+    const todayStr2     = today.toISOString().split('T')[0];
 
-    // ── KPI Invendus ──
-    const entriesThis = appData.entries.filter(e => inRange(e.date, thisWeek));
-    const entriesLast = appData.entries.filter(e => inRange(e.date, lastWeek));
-    const valEntry = entries => entries.reduce((s, e) =>
-      s + e.items.reduce((ss, i) => {
-        const p = getProd(i.productId) || appData.catalog.find(c => c.name===(i.name||i.productName));
-        return ss + (p ? p.price*(i.qty||0) : 0);
-      }, 0), 0);
-    const invThis = valEntry(entriesThis);
-    const invLast = valEntry(entriesLast);
-    const invTrend = invLast > 0 ? Math.round((invThis - invLast) / invLast * 100) : null;
-    const lastEntry = appData.entries.length ? appData.entries.slice().sort((a,b)=>b.date.localeCompare(a.date))[0] : null;
-    const daysSinceEntry = lastEntry ? Math.floor((today - new Date(lastEntry.date)) / 86400000) : 99;
-    const invAlert = daysSinceEntry >= 3 ? `⚠️ Aucune saisie depuis ${daysSinceEntry}j` : daysSinceEntry === 0 ? '✅ Saisie aujourd\'hui' : `ℹ️ Dernière saisie il y a ${daysSinceEntry}j`;
-    const invAlertColor = daysSinceEntry >= 3 ? '#c62828' : daysSinceEntry === 0 ? '#2a8a50' : '#e65100';
+    // ── Calcul CA par circuit & période ───────────────────
+    // Prix produit : prix catalogue
+    const getPrix = (productId, productName) => {
+      const p = getProd(productId) || appData.catalog.find(c => c.name===(productName||''));
+      return p ? (p.price||0) : 0;
+    };
+    // CA SBN = objectifs × prix
+    const caSBN = (days) => days.reduce((s, date) => {
+      const obj = (appData.objectifs||[]).find(o=>o.date===date);
+      return s + (obj?.items||[]).reduce((ss,i) => ss + (i.qteObjectif||0)*getPrix(i.productId,i.productName), 0);
+    }, 0);
+    // CA DD = commandes livraisons
+    const caDD = (days) => {
+      const set = new Set(days);
+      return (appData.commandes_dd||[]).reduce((s,c) => {
+        if (!set.has(c.date||c.semaine||'')) return s;
+        return s + Object.entries(c.items||{}).reduce((ss,[key,qty]) => {
+          const pid = key.split('_').slice(1).join('_');
+          return ss + (qty||0)*getPrix(pid,'');
+        }, 0);
+      }, 0);
+    };
+    // CA Prest = commandes prestataire
+    const caPrest = (days) => {
+      const set = new Set(days);
+      return (appData.commandes_prest||[]).reduce((s,c) => {
+        if (!set.has(c.date||c.semaine||'')) return s;
+        return s + Object.entries(c.items||{}).reduce((ss,[key,qty]) => {
+          const pid = key.split('_').slice(1).join('_');
+          return ss + (qty||0)*getPrix(pid,'');
+        }, 0);
+      }, 0);
+    };
+    // Pièces SBN (volume)
+    const pieceSBN = (days) => days.reduce((s,date) => {
+      const obj = (appData.objectifs||[]).find(o=>o.date===date);
+      return s + (obj?.items||[]).reduce((ss,i)=>ss+(i.qteObjectif||0),0);
+    }, 0);
 
-    // ── KPI Production SBN ──
-    const objThis = (appData.objectifs||[]).filter(o => inRange(o.date, thisWeek));
-    const objLast = (appData.objectifs||[]).filter(o => inRange(o.date, lastWeek));
-    const sumObj = arr => arr.reduce((s, o) => s + (o.items||[]).reduce((ss, i) => ss + (i.qteObjectif||0), 0), 0);
-    const sbnThis = sumObj(objThis); const sbnLast = sumObj(objLast);
-    const sbnTrend = sbnLast > 0 ? Math.round((sbnThis - sbnLast) / sbnLast * 100) : null;
-    const sbnAlert = !semaineOk ? '⚠️ Semaine non validée chef' : `✅ ${sbnThis} pièces planifiées`;
-    const sbnAlertColor = !semaineOk ? '#e65100' : '#2a8a50';
-
-    // ── KPI Commandes DD ──
-    const ddCmds = appData.commandes_dd || [];
-    const ddThis = ddCmds.filter(c => inRange(c.date||c.semaine||'', thisWeek));
-    const ddLast = ddCmds.filter(c => inRange(c.date||c.semaine||'', lastWeek));
-    const valDD = arr => arr.reduce((s,c) => s + ((c.items||c.lignes||[]).reduce((ss,i) => ss+(i.total||i.montant||(i.qty||i.qte||0)*(i.prix||i.price||0)||0),0)),0);
-    const ddValThis = valDD(ddThis); const ddValLast = valDD(ddLast);
-    const ddTrend = ddValLast > 0 ? Math.round((ddValThis - ddValLast) / ddValLast * 100) : null;
-    const ddEnRetard = ddCmds.filter(c => c.statut==='en_retard'||c.statut==='retard').length;
-    const ddAlert = ddEnRetard > 0 ? `⚠️ ${ddEnRetard} commande(s) en retard` : ddCmds.length===0 ? 'ℹ️ Aucune commande DD' : `✅ ${ddCmds.length} commande(s)`;
-    const ddAlertColor = ddEnRetard > 0 ? '#c62828' : ddCmds.length===0 ? '#90a4ae' : '#2a8a50';
-
-    // ── KPI Commandes Prestataire ──
-    const prestCmds = appData.commandes_prestataire || appData.commandes_prest || [];
-    const prestThis = prestCmds.filter(c => inRange(c.date||c.semaine||'', thisWeek));
-    const prestLast = prestCmds.filter(c => inRange(c.date||c.semaine||'', lastWeek));
-    const valPrest = arr => arr.reduce((s,c)=>s+((c.items||c.lignes||[]).reduce((ss,i)=>ss+(i.total||i.montant||(i.qty||i.qte||0)*(i.prix||i.price||0)||0),0)),0);
-    const prestValThis = valPrest(prestThis); const prestValLast = valPrest(prestLast);
-    const prestTrend = prestValLast > 0 ? Math.round((prestValThis - prestValLast) / prestValLast * 100) : null;
-    const prestAlert = prestCmds.length===0 ? 'ℹ️ Aucune commande prestataire' : `✅ ${prestCmds.length} commande(s)`;
-    const prestAlertColor = prestCmds.length===0 ? '#90a4ae' : '#2a8a50';
-
-    const trendBadge = (t, unit='%', inverse=false) => {
-      if (t === null) return `<span style="font-size:0.72rem;color:#90a4ae;font-style:italic">Pas de données S-1</span>`;
-      const up = t >= 0;
-      const bad = inverse ? up : !up; // pour invendus, hausse = mauvais
-      const color = bad ? '#c62828' : '#2a8a50';
-      const arrow = up ? '▲' : '▼';
-      return `<span style="font-size:0.8rem;font-weight:700;color:${color}">${arrow} ${Math.abs(t)}${unit} vs S-1</span>`;
+    // ── Invendus valeur ────────────────────────────────────
+    const valInvendus = (days) => {
+      const set = new Set(days);
+      return (appData.entries||[]).filter(e=>set.has(e.date)).reduce((s,e) =>
+        s + (e.items||[]).reduce((ss,i) => ss + (i.qty||0)*getPrix(i.productId,i.name||i.productName), 0), 0);
     };
 
-    const kpiCard = (icon, title, value, unit, trend, trendInverse, alertText, alertColor, onclick) => `
-      <div onclick="${onclick}" style="background:white;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.07);cursor:pointer;border:1px solid #f0f0f0;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.13)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.07)'">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-size:1.3rem">${icon}</span>
-          <span style="font-size:0.78rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">${title}</span>
-        </div>
-        <div style="font-size:1.6rem;font-weight:900;color:#1a1a1a;margin-bottom:4px">${value}<span style="font-size:0.85rem;font-weight:600;color:#888;margin-left:4px">${unit}</span></div>
-        <div style="margin-bottom:10px">${trendBadge(trend, '%', trendInverse)}</div>
-        <div style="font-size:0.75rem;font-weight:600;color:${alertColor};background:${alertColor}18;border-radius:6px;padding:4px 8px;display:inline-block">${alertText}</div>
-      </div>`;
+    // ── Taux de perte = invendus / CA SBN ──────────────────
+    const tauxPerte = (days) => {
+      const ca = caSBN(days); const inv = valInvendus(days);
+      return ca > 0 ? Math.round(inv/ca*100) : null;
+    };
+
+    // ── Coût matières premières ────────────────────────────
+    const coutMP = (days) => {
+      const mpList = appData.matieres_premieres || [];
+      const recettes = appData.recettes || [];
+      return days.reduce((s, date) => {
+        const obj = (appData.objectifs||[]).find(o=>o.date===date);
+        return s + (obj?.items||[]).reduce((ss,i) => {
+          const rec = recettes.find(r=>r.product_id===i.productId);
+          if (!rec) return ss;
+          const costPer1 = (rec.ingredients||[]).reduce((cs,ing) => {
+            const mp = mpList.find(m=>m.id===ing.mpId||m.name===ing.mpName);
+            return cs + (mp ? (mp.price||0)*(ing.qty||0) : 0);
+          }, 0);
+          return ss + costPer1*(i.qteObjectif||0);
+        }, 0);
+      }, 0);
+    };
+
+    // ── Taux consommation MP = coût MP / CA total ──────────
+    const tauxMP = (days) => {
+      const ca = caSBN(days)+caDD(days)+caPrest(days);
+      const cm = coutMP(days);
+      return ca > 0 ? Math.round(cm/ca*100) : null;
+    };
+
+    // ── Calculs aujourd'hui / cette semaine / ce mois ──────
+    const todayDays = [todayStr2];
+    const caJour  = { sbn:caSBN(todayDays), dd:caDD(todayDays), prest:caPrest(todayDays) };
+    const caSem   = { sbn:caSBN(thisWeekDays), dd:caDD(thisWeekDays), prest:caPrest(thisWeekDays) };
+    const caMois  = { sbn:caSBN(thisMonthDays), dd:caDD(thisMonthDays), prest:caPrest(thisMonthDays) };
+    const caLSem  = { sbn:caSBN(lastWeekDays), dd:caDD(lastWeekDays), prest:caPrest(lastWeekDays) };
+    const caLMois = { sbn:caSBN(lastMonthDays), dd:caDD(lastMonthDays), prest:caPrest(lastMonthDays) };
+
+    const totalJour = caJour.sbn+caJour.dd+caJour.prest;
+    const totalSem  = caSem.sbn+caSem.dd+caSem.prest;
+    const totalMois = caMois.sbn+caMois.dd+caMois.prest;
+    const totalLSem = caLSem.sbn+caLSem.dd+caLSem.prest;
+    const totalLMois= caLMois.sbn+caLMois.dd+caLMois.prest;
+
+    const trendPct = (v, ref) => ref>0 ? Math.round((v-ref)/ref*100) : null;
+    const fmt = (v) => v>=1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0);
+    const fmtE = (v) => fmt(v)+' €';
+
+    // ── Prévisionnel mensuel (extrapolation linéaire) ──────
+    const jourEcoules = thisMonthDays.filter(d=>d<=todayStr2).length || 1;
+    const joursTotaux = thisMonthDays.length;
+    const prevMois    = totalMois / jourEcoules * joursTotaux;
+    const prevMoisSBN = caMois.sbn / jourEcoules * joursTotaux;
+    const prevMoisDD  = caMois.dd  / jourEcoules * joursTotaux;
+    const prevMoisPr  = caMois.prest/ jourEcoules * joursTotaux;
+
+    // ── Taux MP & perte ────────────────────────────────────
+    const tmpSem  = tauxMP(thisWeekDays);
+    const tmpMois = tauxMP(thisMonthDays);
+    const tperteSem  = tauxPerte(thisWeekDays);
+    const tperteMois = tauxPerte(thisMonthDays);
+    const cmpSem  = coutMP(thisWeekDays);
+    const cmpMois = coutMP(thisMonthDays);
+
+    // ── Helpers HTML ───────────────────────────────────────
+    const badge = (v, good, txt) => {
+      if (v===null) return '<span style="color:#90a4ae;font-size:0.72rem">—</span>';
+      const col = v<=good ? '#2a8a50' : v<=good*1.3 ? '#e65100' : '#c62828';
+      return '<span style="font-size:0.78rem;font-weight:700;color:'+col+'">'+txt+'</span>';
+    };
+    const tBadge = (t) => {
+      if (t===null) return '<span style="color:#90a4ae;font-size:0.7rem">pas de réf.</span>';
+      const col = t>=0?'#2a8a50':'#c62828'; const arr = t>=0?'▲':'▼';
+      return '<span style="font-size:0.75rem;font-weight:700;color:'+col+'">'+arr+' '+Math.abs(t)+'%</span>';
+    };
+    const card = (title, icon, rows, onclick='') =>
+      '<div onclick="'+onclick+'" style="background:white;border-radius:12px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.07);cursor:'+(onclick?'pointer':'default')+';border:1px solid #f0f0f0">'
+      +'<div style="font-size:0.72rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+icon+' '+title+'</div>'
+      +rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f5f5f5"><span style="font-size:0.78rem;color:#555">'+r[0]+'</span><div style="text-align:right">'+r[1]+(r[2]?'<br><span style="font-size:0.68rem;color:#aaa">'+r[2]+'</span>':'')+'</div></div>').join('')
+      +'</div>';
 
     dirDashboard = `
-      <div style="margin-bottom:24px">
-        <div class="home-section-title">📊 Tableau de bord — Semaine en cours</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-          ${kpiCard('📦','Invendus / Pertes', invThis.toFixed(0), '€', invTrend, true, invAlert, invAlertColor, "showTab('historique')")}
-          ${kpiCard('🏭','Production SBN', sbnThis, 'pcs', sbnTrend, false, sbnAlert, sbnAlertColor, "showTab('production');showCircuit('bonprod');showSynthView('bilan')")}
-          ${kpiCard('🚚','Commandes DD', ddValThis>0?ddValThis.toFixed(0):ddCmds.length, ddValThis>0?'€':'cmds', ddTrend, false, ddAlert, ddAlertColor, "showTab('production');showCircuit('dd')")}
-          ${kpiCard('🤝','Prestataire', prestValThis>0?prestValThis.toFixed(0):prestCmds.length, prestValThis>0?'€':'cmds', prestTrend, false, prestAlert, prestAlertColor, "showTab('production');showCircuit('prestataire')")}
+      <div id="dir-dashboard" style="margin-bottom:24px">
+
+        <!-- TITRE + ONGLETS J/S/M -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <div class="home-section-title" style="margin:0">📊 Tableau de bord Direction</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="dashPeriod('jour')" id="dash-btn-jour" style="padding:4px 14px;border-radius:20px;border:1.5px solid #1a6b3c;background:#1a6b3c;color:white;font-size:0.78rem;font-weight:700;cursor:pointer">Jour</button>
+            <button onclick="dashPeriod('semaine')" id="dash-btn-semaine" style="padding:4px 14px;border-radius:20px;border:1.5px solid #ccc;background:white;color:#555;font-size:0.78rem;font-weight:700;cursor:pointer">Semaine</button>
+            <button onclick="dashPeriod('mois')" id="dash-btn-mois" style="padding:4px 14px;border-radius:20px;border:1.5px solid #ccc;background:white;color:#555;font-size:0.78rem;font-weight:700;cursor:pointer">Mois</button>
+          </div>
         </div>
+
+        <!-- RÉSULTATS FINANCIERS PAR CIRCUIT -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:12px">
+
+          <!-- CA Total -->
+          <div style="background:linear-gradient(135deg,#1a6b3c,#2a8a50);border-radius:12px;padding:16px;color:white">
+            <div style="font-size:0.7rem;font-weight:800;opacity:0.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">💰 CA Total — Jour</div>
+            <div style="font-size:2rem;font-weight:900">${fmtE(totalJour)}</div>
+            <div style="font-size:0.75rem;opacity:0.85;margin-top:4px">Sem: <strong>${fmtE(totalSem)}</strong> · Mois: <strong>${fmtE(totalMois)}</strong></div>
+            <div style="font-size:0.72rem;opacity:0.7;margin-top:2px">Prévi. fin de mois: ${fmtE(prevMois)}</div>
+          </div>
+
+          <!-- SBN -->
+          ${card('Circuit SBN','🏬',[
+            ['CA jour', '<strong style="font-size:0.95rem">'+fmtE(caJour.sbn)+'</strong>', pieceSBN(todayDays)+' pcs'],
+            ['CA semaine', fmtE(caSem.sbn)+' '+tBadge(trendPct(caSem.sbn,caLSem.sbn)), pieceSBN(thisWeekDays)+' pcs'],
+            ['CA mois', fmtE(caMois.sbn), 'Prévi: '+fmtE(prevMoisSBN)],
+            ['vs mois-1', tBadge(trendPct(caMois.sbn,caLMois.sbn)), '']
+          ], "showTab('production');showCircuit('bonprod');showSynthView('bilan')")}
+
+          <!-- DD -->
+          ${card('Distribution Directe','🚚',[
+            ['CA jour', '<strong style="font-size:0.95rem">'+fmtE(caJour.dd)+'</strong>', ''],
+            ['CA semaine', fmtE(caSem.dd)+' '+tBadge(trendPct(caSem.dd,caLSem.dd)), ''],
+            ['CA mois', fmtE(caMois.dd), 'Prévi: '+fmtE(prevMoisDD)],
+            ['vs mois-1', tBadge(trendPct(caMois.dd,caLMois.dd)), '']
+          ], "showTab('production');showCircuit('dd')")}
+
+          <!-- Prestataire -->
+          ${card('Prestataire','🤝',[
+            ['CA jour', '<strong style="font-size:0.95rem">'+fmtE(caJour.prest)+'</strong>', ''],
+            ['CA semaine', fmtE(caSem.prest)+' '+tBadge(trendPct(caSem.prest,caLSem.prest)), ''],
+            ['CA mois', fmtE(caMois.prest), 'Prévi: '+fmtE(prevMoisPr)],
+            ['vs mois-1', tBadge(trendPct(caMois.prest,caLMois.prest)), '']
+          ], "showTab('production');showCircuit('prestataire')")}
+
+          <!-- MP & Pertes -->
+          ${card('Matières & Pertes','🌾',[
+            ['Coût MP semaine', '<strong>'+fmtE(cmpSem)+'</strong>', tmpSem!==null?'Taux: '+tmpSem+'%':'Taux: —'],
+            ['Coût MP mois', fmtE(cmpMois), tmpMois!==null?'Taux: '+tmpMois+'%':'—'],
+            ['Invendus semaine', fmtE(valInvendus(thisWeekDays)), tperteSem!==null?badge(tperteSem,12,tperteSem+'% du CA'):''],
+            ['Invendus mois', fmtE(valInvendus(thisMonthDays)), tperteMois!==null?badge(tperteMois,12,tperteMois+'% du CA'):'']
+          ], "showTab('historique')")}
+
+        </div>
+
+        <!-- ALERTE PERF -->
+        ${totalSem===0 ? '<div style="background:#fff8e1;border-radius:8px;padding:10px 14px;font-size:0.8rem;color:#e65100;margin-bottom:8px">⚠️ Aucun objectif saisi cette semaine — les CA SBN et prévisions ne peuvent pas être calculés.</div>' : ''}
+        ${tperteSem!==null && tperteSem>15 ? '<div style="background:#fce4ec;border-radius:8px;padding:10px 14px;font-size:0.8rem;color:#c62828;margin-bottom:8px">🔴 Taux de perte élevé cette semaine : <strong>'+tperteSem+'%</strong> du CA SBN — action requise</div>' : ''}
+
       </div>`;
   } // fin if (role === 'direction')
 
@@ -7147,6 +7275,38 @@ async function supaPushCatalog() {
   }
 }
 
+
+// ── Dashboard Direction : switch Jour / Semaine / Mois ──
+function dashPeriod(period) {
+  ['jour','semaine','mois'].forEach(p => {
+    const btn = document.getElementById('dash-btn-'+p);
+    if (!btn) return;
+    const active = p === period;
+    btn.style.background = active ? '#1a6b3c' : 'white';
+    btn.style.color = active ? 'white' : '#555';
+    btn.style.borderColor = active ? '#1a6b3c' : '#ccc';
+  });
+  // Mettre à jour le titre de la carte CA Total
+  const titleEl = document.querySelector('#dir-dashboard .ca-total-title');
+  if (titleEl) {
+    const labels = { jour:'Jour', semaine:'Semaine', mois:'Mois' };
+    titleEl.textContent = '💰 CA Total — ' + labels[period];
+  }
+  // Re-rendre le dashboard avec la bonne période
+  // (simple rechargement de renderHome suffit car les data sont réactives)
+  renderHome();
+  // Restaurer le bon bouton actif après re-render
+  setTimeout(() => {
+    ['jour','semaine','mois'].forEach(p => {
+      const btn = document.getElementById('dash-btn-'+p);
+      if (!btn) return;
+      const active = p === period;
+      btn.style.background = active ? '#1a6b3c' : 'white';
+      btn.style.color = active ? 'white' : '#555';
+      btn.style.borderColor = active ? '#1a6b3c' : '#ccc';
+    });
+  }, 50);
+}
 
 function restoreDefaultCatalog() {
   if (!confirm(`Restaurer le catalogue par défaut (${DEFAULT_CATALOG.length} produits avec IDs courts a1, b1…) ?\n\nVos entrées historiques seront préservées. Les prix seront ceux du code source.`)) return;
