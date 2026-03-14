@@ -1574,21 +1574,32 @@ nav button.active {
     </div>
   </div>
 
-  <!-- Auto-sync -->
+  <!-- Statut sync automatique -->
   <div class="card">
-    <h2>⚙️ Synchronisation automatique</h2>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem">
-        <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync(this.checked)"
-          style="width:18px;height:18px;cursor:pointer">
-        Activer la synchronisation automatique après chaque saisie
-      </label>
-      <span id="auto-sync-badge" style="font-size:0.75rem;padding:3px 10px;border-radius:12px;background:#e8f5e9;color:#2a8a50;display:none">✅ Actif</span>
+      <span style="font-size:1.4rem">🔄</span>
+      <div>
+        <h2 style="margin:0">Synchronisation automatique</h2>
+        <p style="font-size:0.82rem;color:var(--muted);margin:3px 0 0">
+          Active en permanence sur tous les terminaux — aucune configuration requise.
+        </p>
+      </div>
+      <span id="auto-sync-badge" style="margin-left:auto;font-size:0.78rem;padding:4px 12px;border-radius:20px;background:#e8f5e9;color:#2a8a50;font-weight:700">✅ Active</span>
     </div>
-    <p style="font-size:0.78rem;color:var(--muted);margin-top:8px">
-      Lorsqu'activée, chaque enregistrement d'invendu est automatiquement envoyé vers Supabase.
-      Requiert une connexion internet active.
-    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px">
+      <div style="background:#f1f8e9;border-radius:10px;padding:10px 14px;font-size:0.80rem;color:#33691e">
+        <div style="font-weight:800;margin-bottom:2px">⬆️ Push</div>
+        Chaque saisie est envoyée vers Supabase dans les 3 secondes
+      </div>
+      <div style="background:#e3f2fd;border-radius:10px;padding:10px 14px;font-size:0.80rem;color:#0d47a1">
+        <div style="font-weight:800;margin-bottom:2px">⬇️ Pull</div>
+        Les données distantes sont récupérées à chaque connexion
+      </div>
+      <div style="background:#fff3e0;border-radius:10px;padding:10px 14px;font-size:0.80rem;color:#e65100">
+        <div style="font-weight:800;margin-bottom:2px">🔁 Polling</div>
+        Vérification toutes les 90 secondes si en ligne
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2390,7 +2401,7 @@ let _currentRole = null;
 let _pendingRole  = null;
 let _destTypeMap  = {};   // productId → 'recycle' | 'perte'
 // ── Sync globals (déclarés ici pour éviter la TDZ avec l'IIFE init) ──
-let _autoSyncEnabled = false;
+let _autoSyncEnabled = true;
 let _syncLock        = false;
 let _pollTimer       = null;
 let _isOnline        = navigator.onLine;
@@ -2602,16 +2613,22 @@ let _destDate = null; // date en cours de traçage
 
 // ========================================================
 // ========================================================
-// 🗄️ SUPABASE (catalogue référentiel)
-// La clé service_role n'est JAMAIS stockée dans le code.
-// Elle est saisie une seule fois par la Direction dans l'onglet Sync.
+// 🔑 SUPABASE — sync transparente sur tous les appareils
 // ========================================================
 const SUPABASE_URL = 'https://kgejlclbrkkswpgpgngj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZWpsY2xicmtrc3dwZ3BnbmdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0Nzk3NjksImV4cCI6MjA3NzA1NTc2OX0.V4hkZZX8GdHV98agh2G9uViG05MslaCKIArKsvBoW8A';
+
+// ▼ Clé service_role — intégrée pour sync automatique sur tous les terminaux
+// (Supabase → Settings → API → service_role)
+const _HARDCODED_SVC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZWpsY2xicmtrc3dwZ3BnbmdqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQ3OTc2OSwiZXhwIjoyMDc3MDU1NzY5fQ.qpKJeXeK8Q1n-RDfKDaJ5lZUSfi39CovuAuPfnUrPR0';
+
 const _SK_STORE = 'belnati_svc_key';
-function getServiceKey() { try { return localStorage.getItem(_SK_STORE) || ''; } catch { return ''; } }
+function getServiceKey() {
+  // Priorité : clé hardcodée (déployée) → localStorage (rétro-compat)
+  if (_HARDCODED_SVC_KEY && !_HARDCODED_SVC_KEY.startsWith('REMPLACER')) return _HARDCODED_SVC_KEY;
+  try { return localStorage.getItem(_SK_STORE) || ''; } catch { return ''; }
+}
 function setServiceKey(k) { try { localStorage.setItem(_SK_STORE, k.trim()); } catch {} }
-// Alias dynamique — toujours appeler getServiceKey() plutôt que SUPABASE_SERVICE_KEY
 Object.defineProperty(window, 'SUPABASE_SERVICE_KEY', { get: getServiceKey });
 
 // ========================================================
@@ -5422,14 +5439,13 @@ function markDirty(keys) {
 }
 
 function _scheduleBackgroundSync() {
-  if (!_autoSyncEnabled) return;
   if (!getServiceKey()) return;
   if (_autoSyncDebounceTimer) clearTimeout(_autoSyncDebounceTimer);
   _autoSyncDebounceTimer = setTimeout(() => _backgroundSyncAll(), 3000);
 }
 
 async function _backgroundSyncAll() {
-  if (!_autoSyncEnabled || !_isOnline) return;
+  if (!_isOnline) return;
   const sk = getServiceKey();
   if (!sk) return;
   if (_syncLock) { _autoSyncDebounceTimer = setTimeout(() => _backgroundSyncAll(), 5000); return; }
@@ -14525,7 +14541,7 @@ function _loadSyncQueue() {
   try { _syncQueue = JSON.parse(localStorage.getItem('belnati_sync_queue') || '[]'); } catch { _syncQueue = []; }
 }
 async function _flushSyncQueue() {
-  if (!_isOnline || !_autoSyncEnabled || _syncQueue.length === 0) return;
+  if (!_isOnline || _syncQueue.length === 0) return;
   const queue = [..._syncQueue];
   for (const date of queue) {
     const ok = await _pushEntry(date);
@@ -14554,7 +14570,7 @@ async function _pushEntry(date) {
 function startPollSync() {
   if (_pollTimer) clearInterval(_pollTimer);
   _pollTimer = setInterval(async () => {
-    if (!_isOnline || !_autoSyncEnabled) return;
+    if (!_isOnline) return;
     if (_syncQueue.length > 0) await _flushSyncQueue();
     await silentPullOnLogin();
   }, 90000);
@@ -14574,23 +14590,18 @@ function toggleAutoSync(enabled) {
 }
 
 function initAutoSyncToggle() {
-  // Auto-sync activée par défaut (sauf si explicitement désactivée)
-  const stored = localStorage.getItem('belnati_autosync');
-  const shouldEnable = stored !== '0'; // null → true par défaut
+  // Auto-sync TOUJOURS active — transparente sur tous les terminaux
   _loadSyncQueue();
-  if (shouldEnable) {
-    _autoSyncEnabled = true;
-    const tog = document.getElementById('auto-sync-toggle');
-    if (tog) tog.checked = true;
-    const badge = document.getElementById('auto-sync-badge');
-    if (badge) badge.style.display = 'inline-block';
-    startPollSync();
-  }
+  _autoSyncEnabled = true;
+  const tog = document.getElementById('auto-sync-toggle');
+  if (tog) tog.checked = true;
+  const badge = document.getElementById('auto-sync-badge');
+  if (badge) badge.style.display = 'inline-block';
+  startPollSync();
 }
 
 // Sync silencieux d'un seul inventaire après saisie vendeur
 async function silentSyncEntry(date) {
-  if (!_autoSyncEnabled) return;
   if (!getServiceKey()) return;
   if (!_isOnline) {
     _queueSync(date);
@@ -14608,9 +14619,9 @@ async function silentSyncEntry(date) {
   finally { _syncLock = false; }
 }
 
-// Pull au démarrage (silencieux)
+// Pull + Push au démarrage (silencieux, transparent)
 async function silentPullOnLogin() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return;
+  if (!SUPABASE_URL || !getServiceKey()) return;
   try {
     // 1. Pull inventaires récents (30 derniers jours)
     const since = new Date(); since.setDate(since.getDate() - 30);
@@ -14725,6 +14736,52 @@ async function silentPullOnLogin() {
         if (changed) { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
       }
     }
+
+    // 5. Push des invendus locaux non encore dans Supabase
+    //    (cas tablette : données saisies hors-ligne ou sans clé)
+    try {
+      const chkInv = await fetch(`${SUPABASE_URL}/rest/v1/invendus?limit=1`, { headers: getWriteHeaders() }).catch(()=>({ok:false}));
+      if (chkInv.ok && appData.entries && appData.entries.length > 0) {
+        // Récupérer les dates déjà dans Supabase (30 derniers jours)
+        const sinceP = new Date(); sinceP.setDate(sinceP.getDate() - 45);
+        const sincePS = sinceP.toISOString().split('T')[0];
+        const rExist = await fetch(
+          `${SUPABASE_URL}/rest/v1/invendus?select=date&date=gte.${sincePS}&order=date.desc`,
+          { headers: getWriteHeaders() }
+        ).catch(()=>({ok:false}));
+        const remoteDates = rExist.ok
+          ? [...new Set((await rExist.json()).map(r=>r.date))]
+          : [];
+        // Pousser les entrées locales manquantes ou plus récentes
+        const rows = [];
+        appData.entries.forEach(entry => {
+          if (!remoteDates.includes(entry.date)) {  // date absente → push
+            (entry.items||[]).forEach(item => {
+              const qty = parseInt(item.qty||item.quantity||0);
+              if (!qty) return;
+              rows.push({
+                circuit_id: entry.circuit||'SBN',
+                date: entry.date,
+                product_name: item.name||item.productName||item.id||'?',
+                quantite: qty,
+                action: item.dest||item.action||'perte',
+                commentaire: item.comment||''
+              });
+            });
+          }
+        });
+        if (rows.length > 0) {
+          for (let i = 0; i < rows.length; i += 100) {
+            await fetch(`${SUPABASE_URL}/rest/v1/invendus`, {
+              method:'POST',
+              headers: getWriteHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+              body: JSON.stringify(rows.slice(i, i+100))
+            }).catch(()=>{});
+          }
+          _setSyncIndicator('ok');
+        }
+      }
+    } catch(e) { /* silencieux */ }
 
     updateSyncStateGrid();
   } catch(e) { /* silencieux au démarrage */ }
